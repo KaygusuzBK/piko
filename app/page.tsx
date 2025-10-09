@@ -1,6 +1,5 @@
 'use client'
 
-import { useAuth } from '@/contexts/AuthContext'
 import { useAuthStore } from '@/stores/authStore'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
@@ -104,7 +103,7 @@ export default function Home() {
                   Profil Bilgileri
                 </CardTitle>
                 <CardDescription>
-                  OAuth provider'dan gelen profil bilgileri
+                  OAuth provider&apos;dan gelen profil bilgileri
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
