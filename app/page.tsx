@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { useRouter } from 'next/navigation'
 import { Header } from '@/components/Header'
@@ -8,17 +8,17 @@ import { MainFeed } from '@/components/MainFeed'
 import { LeftSidebar } from '@/components/LeftSidebar'
 import { RightSidebar } from '@/components/RightSidebar'
 import { getPosts, PostWithAuthor, toggleLike, toggleRetweet } from '@/lib/posts'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
-import { Users, Sparkles } from 'lucide-react'
+// import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+// import { Button } from '@/components/ui/button'
+// import { Separator } from '@/components/ui/separator'
+// import { Users, Sparkles } from 'lucide-react'
 
 export default function Home() {
   const { user, loading } = useAuthStore()
   const router = useRouter()
   const [posts, setPosts] = useState<PostWithAuthor[]>([])
   const [isCreatePostCompact, setIsCreatePostCompact] = useState(false)
-  const mainFeedRef = useRef<HTMLDivElement>(null)
+  // const mainFeedRef = useRef<HTMLDivElement>(null)
 
   // Scroll takibi MainFeed içine taşındı
 

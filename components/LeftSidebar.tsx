@@ -15,11 +15,10 @@ import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
 
 interface LeftSidebarProps {
-  iconsOnly?: boolean
   hideExtras?: boolean
 }
 
-export function LeftSidebar({ iconsOnly = false, hideExtras = false }: LeftSidebarProps) {
+export function LeftSidebar({ hideExtras = false }: LeftSidebarProps) {
   const router = useRouter()
   const { user } = useAuthStore()
   return (

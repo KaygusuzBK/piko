@@ -21,13 +21,8 @@ import {
   CommandInput,
   CommandList,
 } from '@/components/ui/command'
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import { Search, User, LogOut, Settings, Bell, Sparkles } from 'lucide-react'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { Search, User, LogOut, Settings, Bell } from 'lucide-react'
 import { ThemeToggle } from './theme-toggle'
 import Image from 'next/image'
 import { User as DbUser } from '@/lib/users'
