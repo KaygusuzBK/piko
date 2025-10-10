@@ -77,17 +77,17 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border transition-colors bg-transparent supports-[backdrop-filter]:bg-transparent">
-      <div className="w-full flex h-14 sm:h-16 items-center justify-evenly px-3 sm:px-4 ">
+      <div className="w-full flex h-16 sm:h-16 items-center justify-between px-4 sm:px-6">
         {/* Logo */}
-        <div className="flex items-center space-x-2 sm:space-x-3">
+        <div className="flex items-center space-x-3 sm:space-x-3">
           <Image
             src="/piko_logo.png"
             alt="Piko Logo"
-            width={28}
-            height={28}
+            width={32}
+            height={32}
             className="rounded-lg sm:w-8 sm:h-8"
           />
-          <h1 className="text-lg sm:text-xl font-bold text-primary">Piko</h1>
+          <h1 className="text-xl sm:text-xl font-bold text-primary">Piko</h1>
         </div>
 
         {/* Search Bar - Hidden on mobile, visible on tablet+ */}
@@ -104,10 +104,10 @@ export function Header() {
         </div>
 
         {/* Right Side - Mobile Search, Theme Toggle, Notifications & Profile */}
-        <div className="flex items-center space-x-1 sm:space-x-2">
+        <div className="flex items-center space-x-2 sm:space-x-3">
           {/* Mobile Search Button */}
-          <Button variant="ghost" size="icon" className="md:hidden h-9 w-9" onClick={() => setSearchOpen(true)}>
-            <Search className="h-4 w-4" />
+          <Button variant="ghost" size="icon" className="md:hidden h-10 w-10" onClick={() => setSearchOpen(true)}>
+            <Search className="h-5 w-5" />
             <span className="sr-only">Arama</span>
           </Button>
 
@@ -115,16 +115,16 @@ export function Header() {
           <ThemeToggle />
 
           {/* Notifications - Hidden on mobile */}
-          <Button variant="ghost" size="icon" className="hidden sm:flex h-9 w-9 transition-all duration-200 hover:scale-110">
-            <Bell className="h-4 w-4 transition-transform duration-200 hover:rotate-12" />
+          <Button variant="ghost" size="icon" className="hidden sm:flex h-10 w-10 transition-all duration-200 hover:scale-110">
+            <Bell className="h-5 w-5 transition-transform duration-200 hover:rotate-12" />
             <span className="sr-only">Bildirimler</span>
           </Button>
 
           {/* Profile Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                <Avatar className="h-8 w-8">
+              <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                <Avatar className="h-10 w-10">
                   <AvatarImage 
                     src={user?.user_metadata?.avatar_url} 
                     alt={user?.user_metadata?.full_name || user?.email || 'Kullanıcı'} 
