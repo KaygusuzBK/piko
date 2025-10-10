@@ -169,8 +169,8 @@
 .dark body {
   /* Dark: daha koyu ve neon vurgulu geçiş */
   background:
-    radial-gradient(900px 600px at 60% 40%, rgba(191, 9, 47, 0.28) 0%, rgba(191, 9, 47, 0) 55%),
-    radial-gradient(700px 500px at 20% 70%, rgba(191, 9, 47, 0.18) 0%, rgba(191, 9, 47, 0) 60%),
+    radial-gradient(900px 600px at 60% 40%, rgba(191, 9, 47, 0.34) 0%, rgba(191, 9, 47, 0) 55%),
+    radial-gradient(700px 500px at 20% 70%, rgba(191, 9, 47, 0.24) 0%, rgba(191, 9, 47, 0) 60%),
     linear-gradient(135deg, #000000 0%, #0a0a0a 25%, #0f0f0f 55%, #000000 100%) !important;
   background-attachment: fixed;
   background-repeat: no-repeat;
