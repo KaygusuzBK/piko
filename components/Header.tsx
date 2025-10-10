@@ -76,41 +76,89 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border transition-colors bg-transparent supports-[backdrop-filter]:bg-transparent">
+    <header className="sticky top-0 z-50 w-full border-b border-gray-800 dark:border-gray-700 transition-colors bg-white dark:bg-black supports-[backdrop-filter]:bg-white/95 dark:supports-[backdrop-filter]:bg-black/95">
       <div className="w-full flex h-16 sm:h-16 items-center justify-between px-4 sm:px-6">
         {/* Logo */}
         <div className="flex items-center space-x-3 sm:space-x-3">
-          <Image
-            src="/piko_logo.png"
-            alt="Piko Logo"
-            width={32}
-            height={32}
-            className="rounded-lg sm:w-8 sm:h-8"
-          />
-          <h1 className="text-xl sm:text-xl font-bold text-primary">Piko</h1>
+          <div className="relative">
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 opacity-60 blur-sm"></div>
+            <Image
+              src="/piko_logo.png"
+              alt="Piko Logo"
+              width={32}
+              height={32}
+              className="relative rounded-lg sm:w-8 sm:h-8 z-10"
+            />
+          </div>
+          <h1 className="text-xl sm:text-xl font-bold text-gray-900 dark:text-white">Piko</h1>
         </div>
 
-        {/* Search Bar - Hidden on mobile, visible on tablet+ */}
-        <div className="hidden md:flex flex-1 max-w-md mx-4">
-          <Button
-            variant="outline"
-            className="w-full justify-start text-sm text-muted-foreground border-border hover:border-ring bg-white/70 dark:bg-background"
-            onClick={() => setSearchOpen(true)}
-          >
-            <Search className="mr-2 h-4 w-4" />
-            <span className="hidden lg:inline">Arama yapın...</span>
-            <span className="lg:hidden">Ara...</span>
-          </Button>
+        {/* Search Bar - Mobile: direct input, Desktop: button */}
+        <div className="flex-1 max-w-md mx-2 md:mx-4">
+          {/* Mobile: Direct search input with results */}
+          <div className="md:hidden relative">
+            <input
+              type="text"
+              placeholder="Ara..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-3 py-2 text-sm bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+            />
+            
+            {/* Mobile search results dropdown */}
+            {searchQuery && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                {searchLoading ? (
+                  <div className="p-3 text-center text-gray-500 dark:text-gray-400 text-sm">
+                    Arama yapılıyor...
+                  </div>
+                ) : searchResults.length === 0 ? (
+                  <div className="p-3 text-center text-gray-500 dark:text-gray-400 text-sm">
+                    Kullanıcı bulunamadı.
+                  </div>
+                ) : (
+                  <div className="p-2">
+                    {searchResults.map((dbUser) => (
+                      <div
+                        key={dbUser.id}
+                        onClick={() => handleUserSelect(dbUser.id)}
+                        className="flex items-center space-x-3 p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                      >
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-primary text-primary-foreground">
+                            {dbUser.name?.charAt(0) || dbUser.email?.charAt(0) || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900 dark:text-white text-sm">
+                            {dbUser.name || 'İsim belirtilmemiş'}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{dbUser.email}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          
+          {/* Desktop: Search button */}
+          <div className="hidden md:block">
+            <Button
+              variant="outline"
+              className="w-full justify-start text-sm text-muted-foreground border-border hover:border-ring bg-white/70 dark:bg-background"
+              onClick={() => setSearchOpen(true)}
+            >
+              <Search className="mr-2 h-4 w-4" />
+              <span className="hidden lg:inline">Arama yapın...</span>
+              <span className="lg:hidden">Ara...</span>
+            </Button>
+          </div>
         </div>
 
-        {/* Right Side - Mobile Search, Theme Toggle, Notifications & Profile */}
+        {/* Right Side - Theme Toggle, Notifications & Profile */}
         <div className="flex items-center space-x-2 sm:space-x-3">
-          {/* Mobile Search Button */}
-          <Button variant="ghost" size="icon" className="md:hidden h-10 w-10" onClick={() => setSearchOpen(true)}>
-            <Search className="h-5 w-5" />
-            <span className="sr-only">Arama</span>
-          </Button>
-
           {/* Theme Toggle */}
           <ThemeToggle />
 
