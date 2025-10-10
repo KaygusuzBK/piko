@@ -15,14 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  Command,
-  CommandEmpty,
-  CommandInput,
-  CommandList,
-} from '@/components/ui/command'
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
-import { Search, User, LogOut, Settings, Bell } from 'lucide-react'
+import { User, LogOut, Settings, Bell } from 'lucide-react'
 import { ThemeToggle } from './theme-toggle'
 import Image from 'next/image'
 import { User as DbUser } from '@/lib/users'
@@ -31,7 +24,6 @@ export function Header() {
   const { signOut } = useAuth()
   const { user } = useAuthStore()
   const router = useRouter()
-  const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<DbUser[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
@@ -70,7 +62,6 @@ export function Header() {
   }, [searchQuery, handleSearch])
 
   const handleUserSelect = (userId: string) => {
-    setSearchOpen(false)
     setSearchQuery('')
     router.push(`/users/${userId}`)
   }
@@ -143,17 +134,45 @@ export function Header() {
             )}
           </div>
           
-          {/* Desktop: Search button */}
-          <div className="hidden md:block">
-            <Button
-              variant="outline"
-              className="w-full justify-start text-sm text-muted-foreground border-border hover:border-ring bg-white/70 dark:bg-background"
-              onClick={() => setSearchOpen(true)}
-            >
-              <Search className="mr-2 h-4 w-4" />
-              <span className="hidden lg:inline">Arama yapın...</span>
-              <span className="lg:hidden">Ara...</span>
-            </Button>
+        {/* Desktop: Direct search input with results */}
+          <div className="hidden md:block relative">
+            <input
+              type="text"
+              placeholder="Kullanıcı ara..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-4 py-2 text-sm bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+            />
+
+            {searchQuery && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50 max-h-72 overflow-y-auto">
+                {searchLoading ? (
+                  <div className="p-3 text-center text-gray-500 dark:text-gray-400 text-sm">Arama yapılıyor...</div>
+                ) : searchResults.length === 0 ? (
+                  <div className="p-3 text-center text-gray-500 dark:text-gray-400 text-sm">Kullanıcı bulunamadı.</div>
+                ) : (
+                  <div className="p-2">
+                    {searchResults.map((dbUser) => (
+                      <div
+                        key={dbUser.id}
+                        onClick={() => handleUserSelect(dbUser.id)}
+                        className="flex items-center space-x-3 p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                      >
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-primary text-primary-foreground">
+                            {dbUser.name?.charAt(0) || dbUser.email?.charAt(0) || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900 dark:text-white text-sm">{dbUser.name || 'İsim belirtilmemiş'}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{dbUser.email}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -212,55 +231,7 @@ export function Header() {
           </DropdownMenu>
         </div>
       </div>
-      {/* Unified Search Dialog */}
-      <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
-        <DialogContent className="overflow-hidden p-0 max-w-sm md:max-w-md mx-4 md:mx-auto">
-          <DialogTitle className="sr-only">Kullanıcı Arama</DialogTitle>
-          <Command className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
-            <CommandInput 
-              placeholder="Kullanıcı ara..." 
-              value={searchQuery}
-              onValueChange={setSearchQuery}
-            />
-            <CommandList>
-              {searchLoading ? (
-                <div className="p-4 text-center text-muted-foreground">
-                  Arama yapılıyor...
-                </div>
-              ) : searchResults.length === 0 && searchQuery ? (
-                <CommandEmpty>Kullanıcı bulunamadı.</CommandEmpty>
-              ) : searchResults.length === 0 && !searchQuery ? (
-                <div className="p-4 text-center text-muted-foreground">
-                  Kullanıcı aramak için yazın...
-                </div>
-              ) : (
-                <div className="p-4">
-                  <h3 className="font-medium mb-3">Kullanıcılar ({searchResults.length})</h3>
-                  {searchResults.map((dbUser) => (
-                    <div
-                      key={dbUser.id}
-                      onClick={() => handleUserSelect(dbUser.id)}
-                      className="flex items-center space-x-3 p-3 cursor-pointer hover:bg-accent rounded-lg border border-border mb-2"
-                    >
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-primary text-primary-foreground">
-                          {dbUser.name?.charAt(0) || dbUser.email?.charAt(0) || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <p className="font-medium text-foreground">
-                          {dbUser.name || 'İsim belirtilmemiş'}
-                        </p>
-                        <p className="text-sm text-muted-foreground">{dbUser.email}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CommandList>
-          </Command>
-        </DialogContent>
-      </Dialog>
+      {/* Popup kaldırıldı */}
     </header>
   )
 }
