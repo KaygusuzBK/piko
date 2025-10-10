@@ -1,6 +1,6 @@
-# 🌟 Piko - Modern Social Media App
+# 🌟 Piko - Modern Social App
 
-Piko, Supabase ve Next.js ile geliştirilmiş modern bir sosyal medya uygulaması. Twitter benzeri özellikler sunan, kullanıcıların gönderi paylaşabileceği, beğenebileceği ve etkileşim kurabileceği bir platform.
+Piko, Supabase ve Next.js ile geliştirilmiş modern bir sosyal uygulama. Kullanıcıların GitHub ve Google hesaplarıyla giriş yapabileceği, kullanıcı arama ve profil görüntüleme özelliklerine sahip bir platform.
 
 ## ✨ Özellikler
 
@@ -10,24 +10,11 @@ Piko, Supabase ve Next.js ile geliştirilmiş modern bir sosyal medya uygulamas�
 - **Supabase Auth** entegrasyonu
 - **Güvenli oturum yönetimi**
 
-### 📝 Gönderi Paylaşma
-- **280 karakter** gönderi limiti
-- **Real-time** gönderi oluşturma
-- **Emoji ve resim** desteği
-- **Hashtag** desteği
-
 ### 🔍 Kullanıcı Arama
 - **Real-time arama** - Yazarken anlık filtreleme
 - **Debounced search** - Performans optimizasyonu
 - **İsim ve email** ile arama
 - **Kullanıcı detay sayfaları**
-
-### 💬 Sosyal Etkileşim
-- **Beğeni** sistemi
-- **Retweet** özelliği
-- **Yorum** yapma
-- **Kaydetme** (bookmark)
-- **Takip** sistemi
 
 ### 🎨 Modern UI/UX
 - **Shadcn/ui** bileşenleri
@@ -95,69 +82,28 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 ### 5. Veritabanı Kurulumu
 
-Supabase Dashboard'da **SQL Editor**'a gidin ve `supabase/schema.sql` dosyasındaki SQL kodunu çalıştırın. Bu dosya şunları içerir:
-
-- **Users** tablosu genişletme (username, avatar_url, bio, website, location)
-- **Posts** tablosu (gönderiler)
-- **Post interactions** tablosu (beğeni, retweet, bookmark)
-- **RLS politikaları** (güvenlik)
-- **Trigger'lar** (otomatik sayaç güncellemeleri)
-- **Profiles tablosu otomatik birleştirme** (eğer varsa)
-
-Alternatif olarak, SQL Editor'da aşağıdaki komutu çalıştırabilirsiniz:
+Supabase Dashboard'da **SQL Editor**'a gidin ve aşağıdaki SQL'i çalıştırın:
 
 ```sql
--- Temel tabloları oluştur
-CREATE TABLE IF NOT EXISTS profiles (
-  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+-- Users tablosu oluşturma (opsiyonel - auth.users otomatik oluşur)
+CREATE TABLE IF NOT EXISTS users (
+  id UUID REFERENCES auth.users(id) PRIMARY KEY,
+  email TEXT,
   name TEXT,
-  username TEXT UNIQUE,
-  avatar_url TEXT,
-  bio TEXT,
-  website TEXT,
-  location TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS posts (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  content TEXT NOT NULL CHECK (char_length(content) <= 280),
-  author_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  likes_count INTEGER DEFAULT 0 CHECK (likes_count >= 0),
-  comments_count INTEGER DEFAULT 0 CHECK (comments_count >= 0),
-  retweets_count INTEGER DEFAULT 0 CHECK (retweets_count >= 0)
-);
+-- RLS (Row Level Security) politikaları
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
-CREATE TABLE IF NOT EXISTS post_interactions (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
-  post_id UUID REFERENCES posts(id) ON DELETE CASCADE NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('like', 'retweet', 'bookmark')),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(user_id, post_id, type)
-);
+-- Tüm kullanıcılar kendi verilerini görebilir
+CREATE POLICY "Users can view own data" ON users
+  FOR SELECT USING (auth.uid() = id);
 
--- RLS politikalarını etkinleştir
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE post_interactions ENABLE ROW LEVEL SECURITY;
-
--- Temel politikalar
-CREATE POLICY "Profiles are viewable by everyone" ON profiles FOR SELECT USING (true);
-CREATE POLICY "Users can update their own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
-CREATE POLICY "Users can insert their own profile" ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
-
-CREATE POLICY "Posts are viewable by everyone" ON posts FOR SELECT USING (true);
-CREATE POLICY "Users can create posts" ON posts FOR INSERT WITH CHECK (auth.uid() = author_id);
-CREATE POLICY "Users can update their own posts" ON posts FOR UPDATE USING (auth.uid() = author_id);
-CREATE POLICY "Users can delete their own posts" ON posts FOR DELETE USING (auth.uid() = author_id);
-
-CREATE POLICY "Post interactions are viewable by everyone" ON post_interactions FOR SELECT USING (true);
-CREATE POLICY "Users can create their own interactions" ON post_interactions FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can delete their own interactions" ON post_interactions FOR DELETE USING (auth.uid() = user_id);
+-- Kullanıcılar kendi verilerini güncelleyebilir
+CREATE POLICY "Users can update own data" ON users
+  FOR UPDATE USING (auth.uid() = id);
 ```
 
 ### 6. Projeyi Çalıştırın
@@ -177,17 +123,11 @@ Uygulama [http://localhost:3000](http://localhost:3000) adresinde çalışacak.
 2. **GitHub** veya **Google** ile giriş yapın
 3. OAuth izinlerini onaylayın
 
-### Gönderi Paylaşma
-1. Ana sayfadaki gönderi oluşturma kutusuna tıklayın
-2. Gönderinizi yazın (maksimum 280 karakter)
-3. **Ctrl+Enter** veya **Gönder** butonuna tıklayın
-4. Gönderiniz feed'de görünecek
-
-### Sosyal Etkileşim
-1. Gönderileri **beğenebilir** (kalp ikonu)
-2. Gönderileri **retweet** edebilirsiniz
-3. Gönderileri **kaydedebilir**siniz (bookmark)
-4. Gönderilere **yorum** yapabilirsiniz
+### Kullanıcı Arama
+1. Header'daki arama kutusuna tıklayın
+2. Kullanıcı adı veya email yazın
+3. Sonuçlardan birini seçin
+4. Kullanıcı detay sayfasına yönlendirileceksiniz
 
 ### Tema Değiştirme
 1. Header'daki tema butonuna tıklayın
@@ -204,17 +144,12 @@ piko/
 ├── components/            # React bileşenleri
 │   ├── ui/               # Shadcn/ui bileşenleri
 │   ├── Header.tsx        # Ana header
-│   ├── CreatePost.tsx    # Gönderi oluşturma
-│   ├── PostCard.tsx      # Gönderi kartı
 │   └── theme-toggle.tsx  # Tema değiştirici
 ├── contexts/             # React Context'leri
 │   └── AuthContext.tsx   # Kimlik doğrulama context'i
 ├── lib/                  # Yardımcı fonksiyonlar
 │   ├── supabase.ts       # Supabase client
-│   ├── users.ts          # Kullanıcı API'leri
-│   └── posts.ts          # Gönderi API'leri
-├── supabase/             # Veritabanı şemaları
-│   └── schema.sql        # Ana veritabanı şeması
+│   └── users.ts          # Kullanıcı API'leri
 ├── stores/               # Zustand store'ları
 │   └── authStore.ts      # Kimlik doğrulama store'u
 └── public/              # Statik dosyalar

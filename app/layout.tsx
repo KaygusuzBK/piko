@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Piko - Sosyal Medya",
-  description: "Modern sosyal medya uygulaması",
+  title: "Piko - Supabase Auth",
+  description: "Supabase ile GitHub ve Google OAuth girişi",
 };
 
 export default function RootLayout({

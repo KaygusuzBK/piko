@@ -1,65 +1,23 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 import { Header } from '@/components/Header'
-import { MainFeed } from '@/components/MainFeed'
-import { LeftSidebar } from '@/components/LeftSidebar'
-import { RightSidebar } from '@/components/RightSidebar'
-import { getPosts, PostWithAuthor, toggleLike, toggleRetweet } from '@/lib/posts'
-// import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-// import { Button } from '@/components/ui/button'
-// import { Separator } from '@/components/ui/separator'
-// import { Users, Sparkles } from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { User, Mail, Calendar, Shield } from 'lucide-react'
 
 export default function Home() {
   const { user, loading } = useAuthStore()
   const router = useRouter()
-  const [posts, setPosts] = useState<PostWithAuthor[]>([])
-  const [isCreatePostCompact, setIsCreatePostCompact] = useState(false)
-  // mainFeedRef kaldırıldı
 
-  // Scroll takibi MainFeed içine taşındı
-
-  // Load posts from Supabase - sadece bir kez yükle
-  useEffect(() => {
-    if (!user?.id || loading) return
-    
-    const loadPosts = async () => {
-      try {
-        const fetchedPosts = await getPosts(1000, 0, user.id)
-        setPosts(fetchedPosts)
-      } catch (error) {
-        console.error('Error loading posts:', error)
-      }
-    }
-    
-    loadPosts()
-  }, [user?.id, loading])
-
-  // Eğer kullanıcı yoksa login'e yönlendir
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login')
     }
-  }, [loading, user, router])
-
-  const handlePostCreated = useCallback(() => {
-    // Yeni gönderi oluşturulduğunda feed'i yenile
-    if (!user?.id) return
-    
-    const loadPosts = async () => {
-      try {
-        const fetchedPosts = await getPosts(1000, 0, user.id)
-        setPosts(fetchedPosts)
-      } catch (error) {
-        console.error('Error loading posts:', error)
-      }
-    }
-    
-    loadPosts()
-  }, [user?.id])
+  }, [user, loading, router])
 
   if (loading) {
     return (
@@ -70,71 +28,138 @@ export default function Home() {
   }
 
   if (!user) {
-    return null // Redirect handled above
+    return null // Redirect will happen
   }
 
-  const handleLike = async (postId: string) => {
-    if (!user?.id) return
-    
-    try {
-      const isLiked = await toggleLike(postId, user.id)
-      console.log(isLiked ? 'Post liked' : 'Post unliked')
-      
-      // Feed'i yenileme - PostCard zaten optimistic update yapıyor
-    } catch (error) {
-      console.error('Error toggling like:', error)
-    }
-  }
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
 
-  const handleRetweet = async (postId: string) => {
-    if (!user?.id) return
-    
-    try {
-      const isRetweeted = await toggleRetweet(postId, user.id)
-      console.log(isRetweeted ? 'Post retweeted' : 'Post unretweeted')
-      
-      // Feed'i yenileme - PostCard zaten optimistic update yapıyor
-    } catch (error) {
-      console.error('Error toggling retweet:', error)
-    }
-  }
+      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="px-4 py-6 sm:px-0">
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold text-foreground mb-2">
+              Hoş Geldiniz! 👋
+            </h2>
+            <p className="text-muted-foreground">
+              Supabase OAuth entegrasyonu ile başarıyla giriş yaptınız.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <User className="mr-2 h-5 w-5" />
+                  Kullanıcı Bilgileri
+                </CardTitle>
+                <CardDescription>
+                  Hesap detaylarınız ve giriş bilgileri
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center space-x-3">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Email</p>
+                    <p className="text-foreground">{user.email}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <Shield className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Kullanıcı ID</p>
+                    <p className="text-foreground font-mono text-sm break-all">{user.id}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Son Giriş</p>
+                    <p className="text-foreground">
+                      {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString('tr-TR') : 'Bilinmiyor'}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Hesap Oluşturulma</p>
+                    <p className="text-foreground">
+                      {new Date(user.created_at).toLocaleString('tr-TR')}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-  const handleBookmark = (postId: string) => {
-    console.log('Bookmarked post:', postId)
-  }
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <User className="mr-2 h-5 w-5" />
+                  Profil Bilgileri
+                </CardTitle>
+                <CardDescription>
+                  OAuth provider&apos;dan gelen profil bilgileri
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {user.user_metadata?.avatar_url && (
+                  <div className="flex items-center space-x-4">
+                    <Avatar className="h-16 w-16">
+                      <AvatarImage src={user.user_metadata.avatar_url} alt="Profil Resmi" />
+                      <AvatarFallback>
+                        {user.user_metadata.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium text-foreground">
+                        {user.user_metadata.full_name || user.user_metadata.name || 'İsim belirtilmemiş'}
+                      </p>
+                      <Badge variant="secondary" className="mt-1">
+                        {user.user_metadata.provider || 'Provider bilinmiyor'}
+                      </Badge>
+                    </div>
+                  </div>
+                )}
+                
+                {user.user_metadata?.provider_id && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Provider ID</p>
+                    <p className="text-foreground font-mono text-sm break-all">{user.user_metadata.provider_id}</p>
+                  </div>
+                )}
+                
+                {user.user_metadata?.user_name && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Kullanıcı Adı</p>
+                    <p className="text-foreground">@{user.user_metadata.user_name}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-  const handleComment = (postId: string) => {
-    console.log('Comment on post:', postId)
-  }
-
-      return (
-        <div className="h-screen flex flex-col overflow-hidden">
-          <Header />
-
-          <main className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-4 pt-4 sm:pt-6 pb-0 overflow-hidden min-h-0">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 h-full min-h-0">
-          {/* Left Sidebar */}
-          <LeftSidebar />
-
-          {/* Main Feed */}
-          <MainFeed
-            posts={posts}
-            onPostCreated={handlePostCreated}
-            isCreatePostCompact={isCreatePostCompact}
-            setIsCreatePostCompact={setIsCreatePostCompact}
-            onLike={handleLike}
-            onRetweet={handleRetweet}
-            onBookmark={handleBookmark}
-            onComment={handleComment}
-            currentUserId={user.id}
-            onDelete={() => {
-              // Silme sonrası feed'i yenilemek için
-              handlePostCreated()
-            }}
-          />
-
-          {/* Right Sidebar */}
-          <RightSidebar />
+          <Card className="bg-accent border-border">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-3">
+                <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center">
+                  <span className="text-2xl">🎉</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-1">
+                    Başarıyla Giriş Yaptınız!
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Supabase OAuth entegrasyonu çalışıyor. GitHub veya Google hesabınızla giriş yapabilirsiniz.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
     </div>
