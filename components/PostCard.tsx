@@ -95,7 +95,7 @@ export function PostCard({
           className="w-full border border-border transition-colors duration-200 bg-card dark:bg-transparent card-dark-gradient"
         >
           <CardContent className="p-2 sm:p-3">
-        <div className="flex space-x-2 sm:space-x-3 transition-transform duration-500 data-[appear=true]:animate-none" data-appear={post as any && (post as any).__appear ? true : undefined}>
+        <div className="flex space-x-2 sm:space-x-3 transition-transform duration-500">
           <div className="relative h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
             <div
               className="absolute inset-0 rounded-full pointer-events-none"

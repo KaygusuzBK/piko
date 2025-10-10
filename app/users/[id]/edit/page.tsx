@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, use as usePromise } from 'react'
+import { useEffect, useRef, useState, use as usePromise } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { useRouter } from 'next/navigation'
 import { Header } from '@/components/Header'
@@ -45,7 +45,7 @@ export default function EditProfilePage({ params }: PageProps) {
         setLocation(u.location || '')
         setPhone(u.phone || '')
         setAvatarPreview(u.avatar_url || null)
-        setBannerPreview((u as any).banner_url || null)
+        setBannerPreview((u as unknown as { banner_url?: string })?.banner_url || null)
       }
     })()
   }, [id])
@@ -73,7 +73,7 @@ export default function EditProfilePage({ params }: PageProps) {
     setSaving(true)
     try {
       let avatarUrl = dbUser?.avatar_url || null
-      let bannerUrl = (dbUser as any)?.banner_url || null
+      let bannerUrl = (dbUser as unknown as { banner_url?: string })?.banner_url || null
 
       if (avatarFileRef.current) {
         const url = await uploadUserImage(user.id, avatarFileRef.current, 'avatar')
