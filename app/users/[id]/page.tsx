@@ -1,12 +1,12 @@
 'use client'
 
 import { useAuthStore } from '@/stores/authStore'
-import { fetchUserById } from '@/lib/users'
+import { fetchUserById, updateUserById, uploadUserImage } from '@/lib/users'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useRef, use as usePromise } from 'react'
 import { Header } from '@/components/Header'
 import { LeftSidebar } from '@/components/LeftSidebar'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import { User as DbUser } from '@/lib/users'
@@ -99,7 +99,7 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
 
   if (!dbUser) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-transparent">
         <Header />
         <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="px-4 py-6 sm:px-0">
@@ -118,7 +118,7 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <Header />
 
       <main className="flex-1 max-w-7xl mx-auto w-full py-4 sm:py-6 px-3 sm:px-4 overflow-hidden">
@@ -147,10 +147,15 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
                   backgroundPosition: 'center',
                 }}
               >
-                <div className="absolute inset-0 bg-background/60" />
+                <div className="absolute inset-0 bg-piko-header" />
                 <div className="relative h-full flex items-center justify-between gap-3">
                   <div className="flex items-center space-x-3 min-w-0">
                     <Avatar className="h-8 w-8 md:h-9 md:w-9">
+                      <AvatarImage 
+                        src={dbUser.avatar_url} 
+                        alt={dbUser.name || 'Kullanıcı'} 
+                        className="object-cover"
+                      />
                       <AvatarFallback>
                         {dbUser.name?.charAt(0) || dbUser.email?.charAt(0) || 'U'}
                       </AvatarFallback>
@@ -175,20 +180,67 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
             <div>
               {/* Banner */}
               <div
-                className={`bg-cover bg-center bg-muted transition-all duration-300 ${isCompact ? 'h-40' : 'h-56 lg:h-72'}`}
-                style={{ backgroundImage: dbUser.avatar_url ? `url(${dbUser.avatar_url})` : undefined }}
-              ></div>
+                className={`bg-cover bg-center transition-all duration-300 ${isCompact ? 'h-40' : 'h-56 lg:h-72'}`}
+                style={{ backgroundImage: dbUser.banner_url ? `url(${dbUser.banner_url})` : undefined }}
+              >
+                {!dbUser.banner_url && (
+                  <div className="w-full h-full bg-piko-header" />
+                )}
+              </div>
 
               {/* Bilgiler */}
               <div className="p-4">
                 <div className="flex justify-between items-start">
                   <Avatar className={`border-4 border-background transition-all duration-300 ${isCompact ? 'w-24 h-24 -mt-12' : 'w-28 h-28 lg:w-32 lg:h-32 -mt-16 lg:-mt-20'}`}>
+                    <AvatarImage 
+                      src={dbUser.avatar_url} 
+                      alt={dbUser.name || 'Kullanıcı'} 
+                      className="object-cover"
+                    />
                     <AvatarFallback className={`${isCompact ? 'text-lg' : 'text-2xl'}`}>
                       {dbUser.name?.charAt(0) || dbUser.email?.charAt(0) || 'U'}
                     </AvatarFallback>
                   </Avatar>
                   {user?.id === dbUser.id && !isCompact && (
-                    <Button variant="outline" className="mt-2 font-bold">Profili Düzenle</Button>
+                    <label className="mt-2 font-bold inline-flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          const url = await uploadUserImage(user.id, file, 'banner')
+                          if (url) {
+                            const updated = await updateUserById(user.id, { banner_url: url })
+                            if (updated) setDbUser(updated)
+                          }
+                        }}
+                      />
+                      <span className="px-3 py-1 rounded-md border border-border bg-background/60 hover:bg-background/80">Banner Değiştir</span>
+                    </label>
+                  )}
+                  {user?.id === dbUser.id && !isCompact && (
+                    <div className="flex gap-2 mt-2">
+                      <label className="font-bold inline-flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            const url = await uploadUserImage(user.id, file, 'avatar')
+                            if (url) {
+                              const updated = await updateUserById(user.id, { avatar_url: url })
+                              if (updated) setDbUser(updated)
+                            }
+                          }}
+                        />
+                        <span className="px-3 py-1 rounded-md border border-border bg-background/60 hover:bg-background/80">Avatar Değiştir</span>
+                      </label>
+                      <Button variant="outline" onClick={() => router.push(`/users/${dbUser.id}/edit`)}>Profili Düzenle</Button>
+                    </div>
                   )}
                 </div>
 

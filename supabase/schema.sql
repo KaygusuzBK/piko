@@ -5,9 +5,11 @@
 ALTER TABLE public.users 
 ADD COLUMN IF NOT EXISTS username TEXT UNIQUE,
 ADD COLUMN IF NOT EXISTS avatar_url TEXT,
+ADD COLUMN IF NOT EXISTS banner_url TEXT,
 ADD COLUMN IF NOT EXISTS bio TEXT,
 ADD COLUMN IF NOT EXISTS website TEXT,
-ADD COLUMN IF NOT EXISTS location TEXT;
+ADD COLUMN IF NOT EXISTS location TEXT,
+ADD COLUMN IF NOT EXISTS phone TEXT;
 
 -- 2. Eğer profiles tablosu varsa, verilerini users tablosuna taşı ve kaldır
 -- Önce profiles tablosunun var olup olmadığını kontrol et
@@ -69,10 +71,63 @@ CREATE INDEX IF NOT EXISTS idx_post_interactions_user_id ON post_interactions(us
 CREATE INDEX IF NOT EXISTS idx_post_interactions_post_id ON post_interactions(post_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON public.users(username) WHERE username IS NOT NULL;
 
+-- 5.1 Storage buckets for user images
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'avatars') THEN
+    INSERT INTO storage.buckets (id, name, public) VALUES ('avatars', 'avatars', true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'banners') THEN
+    INSERT INTO storage.buckets (id, name, public) VALUES ('banners', 'banners', true);
+  END IF;
+END $$;
+
 -- 6. RLS (Row Level Security) politikaları
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE post_interactions ENABLE ROW LEVEL SECURITY;
+
+-- Storage RLS
+-- storage.objects zaten RLS açık; yeniden açmaya çalışmak owner yetkisi ister ve hata verir
+-- ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
+-- Reset existing storage policies for our buckets
+DO $$
+BEGIN
+  DROP POLICY IF EXISTS "Public read avatars" ON storage.objects;
+  DROP POLICY IF EXISTS "Public read banners" ON storage.objects;
+  DROP POLICY IF EXISTS "Users manage own avatar objects" ON storage.objects;
+  DROP POLICY IF EXISTS "Users manage own banner objects" ON storage.objects;
+END $$;
+
+-- Public read for avatars and banners
+CREATE POLICY "Public read avatars" ON storage.objects
+  FOR SELECT TO public
+  USING (bucket_id = 'avatars');
+
+CREATE POLICY "Public read banners" ON storage.objects
+  FOR SELECT TO public
+  USING (bucket_id = 'banners');
+
+-- Helpers: users can write only to their own folder: <uid>/...
+-- This uses split_part(name,'/',1) to compare the folder prefix
+CREATE POLICY "Users manage own avatar objects" ON storage.objects
+  FOR ALL TO authenticated
+  USING (
+    bucket_id = 'avatars' AND split_part(name, '/', 1) = auth.uid()::text
+  )
+  WITH CHECK (
+    bucket_id = 'avatars' AND split_part(name, '/', 1) = auth.uid()::text
+  );
+
+CREATE POLICY "Users manage own banner objects" ON storage.objects
+  FOR ALL TO authenticated
+  USING (
+    bucket_id = 'banners' AND split_part(name, '/', 1) = auth.uid()::text
+  )
+  WITH CHECK (
+    bucket_id = 'banners' AND split_part(name, '/', 1) = auth.uid()::text
+  );
 
 -- Eski profiles politikalarını kaldır (eğer varsa)
 DO $$
