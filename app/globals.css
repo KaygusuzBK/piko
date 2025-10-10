@@ -89,12 +89,33 @@
 }
 
 .bg-piko-gradient {
-  background-image: linear-gradient(to right, var(--piko-gradient-start), var(--piko-gradient-end));
+  background-image: linear-gradient(135deg, #0a0a0a 0%, #2b2b2b 100%);
 }
 
 .hover\:bg-piko-gradient:hover {
-  background-image: linear-gradient(to right, var(--piko-gradient-start), var(--piko-gradient-end));
+  background-image: linear-gradient(135deg, #0a0a0a 0%, #2b2b2b 100%);
 }
+
+/* Header/Top areas: navy (#132440) to burgundy (#BF092F) */
+.bg-piko-header {
+  background-image: linear-gradient(135deg, #132440 0%, #BF092F 100%);
+}
+
+/* Darker variant for header in dark theme */
+.bg-piko-header-dark {
+  background-image:
+    linear-gradient(0deg, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
+    linear-gradient(135deg, #132440 0%, #BF092F 100%);
+}
+
+/* Solid dark navy for cards/inputs in top area */
+.bg-piko-navy-dark {
+  background-color: #0D1A2A;
+}
+
+/* Dark-only card gradient for posts */
+.card-dark-gradient { background-image: none; }
+.dark .card-dark-gradient { background-image: linear-gradient(135deg, #0a0a0a 0%, #2b2b2b 100%); }
 
 .dark {
   --background: #000000;
@@ -134,15 +155,38 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground overflow-hidden;
+  html, body {
+    @apply text-foreground overflow-hidden;
+    min-height: 100vh;
+    /* Light: çapraz beyaz → #BF092F → beyaz geçiş + yumuşatma */
+    background:
+      radial-gradient(900px 600px at 50% 50%, rgba(191, 9, 47, 0.10) 0%, rgba(191, 9, 47, 0) 70%),
+      linear-gradient(135deg, #ffffff 0%, #ffffff 28%, rgba(191, 9, 47, 0.60) 50%, #ffffff 72%, #ffffff 100%) !important;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    background-size: cover;
   }
-  html {
-    overflow: hidden;
+  .dark body {
+    /* Dark: siyah ile karışık çapraz #BF092F geçiş + yumuşatma */
+    background:
+      radial-gradient(900px 600px at 50% 50%, rgba(191, 9, 47, 0.12) 0%, rgba(191, 9, 47, 0) 70%),
+      linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.9) 28%, rgba(191, 9, 47, 0.45) 50%, rgba(0, 0, 0, 0.9) 72%, rgba(0, 0, 0, 0.95) 100%) !important;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    background-size: cover;
   }
+  html { overflow: hidden; }
+
+  /* Ensure Next.js root doesn't interfere with body gradient */
+  #__next { background: transparent; }
 }
 
 @layer utilities {
+  @keyframes drop-in {
+    0% { transform: translateY(-8px); opacity: 0 }
+    100% { transform: translateY(0); opacity: 1 }
+  }
+  .animate-drop-in { animation: drop-in 420ms ease-out both }
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;

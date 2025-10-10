@@ -81,7 +81,7 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border transition-colors bg-transparent supports-[backdrop-filter]:bg-transparent">
       <div className="w-full flex h-14 sm:h-16 items-center justify-evenly px-3 sm:px-4 ">
         {/* Logo */}
         <div className="flex items-center space-x-2 sm:space-x-3">
@@ -99,7 +99,7 @@ export function Header() {
         <div className="hidden md:flex flex-1 max-w-md mx-4">
           <Button
             variant="outline"
-            className="w-full justify-start text-sm text-muted-foreground border-border hover:border-ring"
+            className="w-full justify-start text-sm text-muted-foreground border-border hover:border-ring bg-white/70 dark:bg-background"
             onClick={() => setSearchOpen(true)}
           >
             <Search className="mr-2 h-4 w-4" />
