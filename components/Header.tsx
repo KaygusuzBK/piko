@@ -116,6 +116,10 @@ export function Header() {
                         className="flex items-center space-x-3 p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
                       >
                         <Avatar className="h-8 w-8">
+                          <AvatarImage
+                            src={dbUser.avatar_url || undefined}
+                            alt={dbUser.name || dbUser.email || 'Kullanıcı'}
+                          />
                           <AvatarFallback className="bg-primary text-primary-foreground">
                             {dbUser.name?.charAt(0) || dbUser.email?.charAt(0) || 'U'}
                           </AvatarFallback>
@@ -159,6 +163,10 @@ export function Header() {
                         className="flex items-center space-x-3 p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
                       >
                         <Avatar className="h-8 w-8">
+                          <AvatarImage
+                            src={dbUser.avatar_url || undefined}
+                            alt={dbUser.name || dbUser.email || 'Kullanıcı'}
+                          />
                           <AvatarFallback className="bg-primary text-primary-foreground">
                             {dbUser.name?.charAt(0) || dbUser.email?.charAt(0) || 'U'}
                           </AvatarFallback>
