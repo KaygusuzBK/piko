@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAuthStore } from '@/stores/authStore'
-import { fetchUsers } from '@/lib/users'
+import { searchUsers } from '@/lib/users'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -47,42 +47,32 @@ export function Header() {
   }
 
   const handleSearch = useCallback(async (query: string) => {
-    if (!query.trim()) {
+    const trimmed = query.trim()
+    if (!searchOpen || !trimmed) {
       setSearchResults([])
       return
     }
 
     setSearchLoading(true)
     try {
-      const users = await fetchUsers()
-      
-      const filtered = users.filter((u) => {
-        const name = u.name?.toLowerCase() || ''
-        const email = u.email?.toLowerCase() || ''
-        const searchTerm = query.toLowerCase()
-        
-        const nameMatch = name.includes(searchTerm)
-        const emailMatch = email.includes(searchTerm)
-        
-        return nameMatch || emailMatch
-      })
-      setSearchResults(filtered)
+      const results = await searchUsers(trimmed, 20)
+      setSearchResults(results)
     } catch (error) {
       console.error('Search error:', error)
       setSearchResults([])
     } finally {
       setSearchLoading(false)
     }
-  }, [])
+  }, [searchOpen])
 
   // Debounced search
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       handleSearch(searchQuery)
-    }, 300) // 300ms debounce
+    }, 300)
 
     return () => clearTimeout(timeoutId)
-  }, [searchQuery, handleSearch])
+  }, [searchQuery, searchOpen, handleSearch])
 
   const handleUserSelect = (userId: string) => {
     setSearchOpen(false)
@@ -162,7 +152,7 @@ export function Header() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => user && router.push(`/users/${user.id}`)}>
                 <User className="mr-2 h-4 w-4" />
                 <span>Profil</span>
               </DropdownMenuItem>

@@ -4,6 +4,11 @@ export interface User {
   id: string
   email?: string
   name?: string
+  username?: string
+  avatar_url?: string
+  bio?: string
+  website?: string
+  location?: string
   created_at?: string
   updated_at?: string
   // Diğer alanları tablo yapısına göre ekleyebiliriz
@@ -48,6 +53,54 @@ export async function fetchUsers(): Promise<User[]> {
 
   } catch (error) {
     console.error('Error fetching users:', error)
+    return []
+  }
+}
+
+// Tek bir kullanıcıyı id ile getir
+export async function fetchUserById(id: string): Promise<User | null> {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error) {
+      console.error('Error fetching user by id:', error)
+      return null
+    }
+
+    return data
+  } catch (error) {
+    console.error('Error fetching user by id:', error)
+    return null
+  }
+}
+
+// Arama için filtreli kullanıcı listesi
+export async function searchUsers(query: string, limit: number = 20): Promise<User[]> {
+  try {
+    const trimmed = query.trim()
+    if (!trimmed) return []
+
+    // name veya email üzerinden arama
+    // Not: Eğer name kolonu yoksa view/tsearch ile genişletilebilir
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .or(`name.ilike.%${trimmed}%,email.ilike.%${trimmed}%`)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (error) {
+      console.error('Error searching users:', error)
+      return []
+    }
+
+    return data || []
+  } catch (error) {
+    console.error('Error searching users:', error)
     return []
   }
 }

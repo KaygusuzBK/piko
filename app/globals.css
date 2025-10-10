@@ -57,11 +57,11 @@
   --popover-foreground: #000000;
   --primary: #000000;
   --primary-foreground: #ffffff;
-  --secondary: #f5f5f5;
+  --secondary: #ffffff;
   --secondary-foreground: #000000;
-  --muted: #f5f5f5;
+  --muted: #ffffff;
   --muted-foreground: #666666;
-  --accent: #f5f5f5;
+  --accent: #ffffff;
   --accent-foreground: #000000;
   --destructive: #ef4444;
   --border: #e5e5e5;
@@ -76,10 +76,24 @@
   --sidebar-foreground: #000000;
   --sidebar-primary: #000000;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f5f5f5;
+  --sidebar-accent: #ffffff;
   --sidebar-accent-foreground: #000000;
   --sidebar-border: #e5e5e5;
   --sidebar-ring: #000000;
+}
+
+/* Brand gradient tokens */
+:root {
+  --piko-gradient-start: #132440;
+  --piko-gradient-end: #16476A;
+}
+
+.bg-piko-gradient {
+  background-image: linear-gradient(to right, var(--piko-gradient-start), var(--piko-gradient-end));
+}
+
+.hover\:bg-piko-gradient:hover {
+  background-image: linear-gradient(to right, var(--piko-gradient-start), var(--piko-gradient-end));
 }
 
 .dark {

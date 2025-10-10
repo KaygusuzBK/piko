@@ -29,6 +29,8 @@ interface PostCardProps {
   onRetweet?: (postId: string) => void
   onBookmark?: (postId: string) => void
   onComment?: (postId: string) => void
+  canDelete?: boolean
+  onDelete?: (postId: string) => void
 }
 
 export function PostCard({ 
@@ -36,7 +38,9 @@ export function PostCard({
   onLike, 
   onRetweet, 
   onBookmark, 
-  onComment 
+  onComment,
+  canDelete = false,
+  onDelete
 }: PostCardProps) {
   const [isLiked, setIsLiked] = useState(post.user_interaction_status?.isLiked || false)
   const [isRetweeted, setIsRetweeted] = useState(post.user_interaction_status?.isRetweeted || false)
@@ -87,19 +91,36 @@ export function PostCard({
   }
 
   return (
-        <Card className="w-full border border-border bg-card hover:bg-accent transition-colors duration-200">
+        <Card
+          className="w-full border border-border transition-colors duration-200"
+          style={{
+            backgroundImage:
+              'linear-gradient(to right, var(--piko-gradient-start), var(--piko-gradient-end))',
+          }}
+        >
           <CardContent className="p-2 sm:p-3">
         <div className="flex space-x-2 sm:space-x-3">
-          <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
-            <AvatarImage 
-              src={post.author.avatar_url} 
-              alt={post.author.username}
-              className="object-cover"
+          <div className="relative h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
+            <div
+              className="absolute inset-0 rounded-full pointer-events-none"
+              style={{
+                background:
+                  'radial-gradient(circle, rgba(191,9,47,0.75) 0%, rgba(191,9,47,0.45) 55%, rgba(191,9,47,0) 80%)',
+                filter: 'blur(3px)',
+                transform: 'scale(1.6)'
+              }}
             />
-            <AvatarFallback className="text-xs sm:text-sm font-semibold bg-primary text-primary-foreground">
-              {post.author.username.charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+            <Avatar className="h-full w-full">
+              <AvatarImage 
+                src={post.author.avatar_url} 
+                alt={post.author.username}
+                className="object-cover"
+              />
+              <AvatarFallback className="text-xs sm:text-sm font-semibold bg-primary text-primary-foreground">
+                {post.author.username.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          </div>
           
           <div className="flex-1 space-y-1 min-w-0">
             {/* Header */}
@@ -125,6 +146,14 @@ export function PostCard({
                   <DropdownMenuItem>Paylaş</DropdownMenuItem>
                   <DropdownMenuItem>Kopyala</DropdownMenuItem>
                   <DropdownMenuItem className="text-red-500">Şikayet et</DropdownMenuItem>
+                  {canDelete && (
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => onDelete?.(post.id)}
+                    >
+                      Sil
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

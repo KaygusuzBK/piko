@@ -38,6 +38,13 @@ export default function Home() {
     loadPosts()
   }, [user?.id, loading])
 
+  // Eğer kullanıcı yoksa login'e yönlendir
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login')
+    }
+  }, [loading, user, router])
+
   const handlePostCreated = useCallback(() => {
     // Yeni gönderi oluşturulduğunda feed'i yenile
     if (!user?.id) return
@@ -63,7 +70,7 @@ export default function Home() {
   }
 
   if (!user) {
-    return null // Redirect will happen
+    return null // Redirect handled above
   }
 
   const handleLike = async (postId: string) => {

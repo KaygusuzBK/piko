@@ -1,28 +1,34 @@
 'use client'
 
 import { useAuthStore } from '@/stores/authStore'
-import { fetchUsers } from '@/lib/users'
+import { fetchUserById } from '@/lib/users'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, use as usePromise } from 'react'
 import { Header } from '@/components/Header'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { LeftSidebar } from '@/components/LeftSidebar'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { User, Mail, Calendar, Shield, ArrowLeft } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { User as DbUser } from '@/lib/users'
+import { PostCard } from '@/components/PostCard'
+import { PostWithAuthor, getUserPosts, togglePostBookmark, togglePostLike, togglePostRetweet, deletePost } from '@/lib/posts'
 
 interface UserDetailPageProps {
-  params: {
-    id: string
-  }
+  params: Promise<{ id: string }>
 }
 
 export default function UserDetailPage({ params }: UserDetailPageProps) {
+  const { id: paramsId } = usePromise(params)
   const { user, loading } = useAuthStore()
   const router = useRouter()
   const [dbUser, setDbUser] = useState<DbUser | null>(null)
   const [userLoading, setUserLoading] = useState(true)
+  const [posts, setPosts] = useState<PostWithAuthor[]>([])
+  const [postsLoading, setPostsLoading] = useState(true)
+  const userLoadedRef = useRef<string | null>(null)
+  const postsLoadedRef = useRef<string | null>(null)
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null)
+  const [isCompact, setIsCompact] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -31,18 +37,53 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
   }, [user, loading, router])
 
   useEffect(() => {
+    if (loading) return
+    if (!user) {
+      router.push('/login')
+      return
+    }
+    if (userLoadedRef.current === paramsId) return
+
     const loadUser = async () => {
       setUserLoading(true)
-      const users = await fetchUsers()
-      const foundUser = users.find(u => u.id === params.id)
-      setDbUser(foundUser || null)
+      const foundUser = await fetchUserById(paramsId)
+      setDbUser(foundUser)
       setUserLoading(false)
+      userLoadedRef.current = paramsId
     }
 
-    if (user) {
-      loadUser()
+    loadUser()
+  }, [loading, user, user?.id, paramsId, router])
+
+  useEffect(() => {
+    if (loading) return
+    if (!user) return
+    if (postsLoadedRef.current === paramsId) return
+
+    const loadPosts = async () => {
+      setPostsLoading(true)
+      const data = await getUserPosts(paramsId)
+      setPosts(data)
+      setPostsLoading(false)
+      postsLoadedRef.current = paramsId
     }
-  }, [user, params.id])
+
+    loadPosts()
+  }, [loading, user, user?.id, paramsId])
+
+  // Scroll dinleyicisi: profil üst bölümü kompakt moda geçsin
+  useEffect(() => {
+    const el = scrollContainerRef.current
+    if (!el) return
+
+    const onScroll = () => {
+      const threshold = 40
+      setIsCompact(el.scrollTop > threshold)
+    }
+
+    el.addEventListener('scroll', onScroll)
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
 
   if (loading || userLoading) {
     return (
@@ -80,111 +121,149 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="mb-8">
-            <Button onClick={() => router.push('/')} variant="outline" className="mb-4">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Ana Sayfaya Dön
-            </Button>
-            <h2 className="text-3xl font-bold text-foreground mb-2">
-              Kullanıcı Detayları
-            </h2>
-            <p className="text-muted-foreground">
-              {dbUser.name || 'İsim belirtilmemiş'} kullanıcısının detaylı bilgileri
-            </p>
-          </div>
+      <main className="flex-1 max-w-7xl mx-auto w-full py-4 sm:py-6 px-3 sm:px-4 overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 flex-1">
+          {/* Sol Sidebar */}
+          <LeftSidebar hideExtras />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <User className="mr-2 h-5 w-5" />
-                  Temel Bilgiler
-                </CardTitle>
-                <CardDescription>
-                  Kullanıcının temel bilgileri
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center space-x-4">
-                  <Avatar className="h-16 w-16">
-                    <AvatarFallback>
+          {/* Profil Orta Alan */}
+          <div
+            ref={scrollContainerRef}
+            className="flex-grow min-h-screen border-x border-border lg:col-span-2 h-[calc(100vh-6rem)] overflow-y-auto scrollbar-hide pb-24"
+            onScroll={(e) => {
+              const target = e.currentTarget as HTMLDivElement
+              const threshold = 40
+              const next = target.scrollTop > threshold
+              if (next !== isCompact) setIsCompact(next)
+            }}
+          >
+            {/* Kompakt başlık */}
+            {isCompact && (
+              <div
+                className="sticky top-0 z-20 h-14 md:h-16 border-b border-border px-4"
+                style={{
+                  backgroundImage: dbUser.avatar_url ? `url(${dbUser.avatar_url})` : undefined,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
+              >
+                <div className="absolute inset-0 bg-background/60" />
+                <div className="relative h-full flex items-center justify-between gap-3">
+                  <div className="flex items-center space-x-3 min-w-0">
+                    <Avatar className="h-8 w-8 md:h-9 md:w-9">
+                      <AvatarFallback>
+                        {dbUser.name?.charAt(0) || dbUser.email?.charAt(0) || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="truncate">
+                      <div className="text-sm md:text-base font-semibold truncate text-foreground">{dbUser.name || 'Kullanıcı'}</div>
+                      {dbUser.username && (
+                        <div className="text-xs text-muted-foreground truncate">@{dbUser.username}</div>
+                      )}
+                    </div>
+                  </div>
+                  {user?.id === dbUser.id && (
+                    <Button variant="outline" size="sm" className="h-8 md:h-9">Profili Düzenle</Button>
+                  )}
+                </div>
+              </div>
+            )}
+            {isCompact && <div className="h-14 md:h-16" />}
+            {/* Üst boşluk/başlık kaldırıldı: isim sadece profil bölümünde gösterilir */}
+
+            {/* Profil Detayları */}
+            <div>
+              {/* Banner */}
+              <div
+                className={`bg-cover bg-center bg-muted transition-all duration-300 ${isCompact ? 'h-40' : 'h-56 lg:h-72'}`}
+                style={{ backgroundImage: dbUser.avatar_url ? `url(${dbUser.avatar_url})` : undefined }}
+              ></div>
+
+              {/* Bilgiler */}
+              <div className="p-4">
+                <div className="flex justify-between items-start">
+                  <Avatar className={`border-4 border-background transition-all duration-300 ${isCompact ? 'w-24 h-24 -mt-12' : 'w-28 h-28 lg:w-32 lg:h-32 -mt-16 lg:-mt-20'}`}>
+                    <AvatarFallback className={`${isCompact ? 'text-lg' : 'text-2xl'}`}>
                       {dbUser.name?.charAt(0) || dbUser.email?.charAt(0) || 'U'}
                     </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <h3 className="text-xl font-semibold text-foreground">
-                      {dbUser.name || 'İsim belirtilmemiş'}
-                    </h3>
-                    <Badge variant="secondary" className="mt-1">
-                      ID: {dbUser.id}
-                    </Badge>
-                  </div>
+                  {user?.id === dbUser.id && !isCompact && (
+                    <Button variant="outline" className="mt-2 font-bold">Profili Düzenle</Button>
+                  )}
                 </div>
 
-                <div className="flex items-center space-x-3">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Email</p>
-                    <p className="text-foreground">{dbUser.email || 'Email belirtilmemiş'}</p>
-                  </div>
+                <div className="mt-2">
+                  <h2 className={`font-bold text-foreground transition-all duration-300 ${isCompact ? 'text-xl' : 'text-2xl'}`}>{dbUser.name || 'Kullanıcı'}</h2>
+                  {dbUser.username && <p className="text-muted-foreground">@{dbUser.username}</p>}
                 </div>
 
-                {dbUser.created_at && (
-                  <div className="flex items-center space-x-3">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Hesap Oluşturulma</p>
-                      <p className="text-foreground">
-                        {new Date(dbUser.created_at).toLocaleString('tr-TR')}
-                      </p>
-                    </div>
-                  </div>
+                {dbUser.bio && (
+                  <p className="mt-4 text-foreground/90">{dbUser.bio}</p>
                 )}
 
-                {dbUser.updated_at && (
-                  <div className="flex items-center space-x-3">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Son Güncelleme</p>
-                      <p className="text-foreground">
-                        {new Date(dbUser.updated_at).toLocaleString('tr-TR')}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Shield className="mr-2 h-5 w-5" />
-                  Sistem Bilgileri
-                </CardTitle>
-                <CardDescription>
-                  Kullanıcı ile ilgili sistem bilgileri
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <Shield className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Kullanıcı ID</p>
-                    <p className="text-foreground font-mono text-sm break-all">{dbUser.id}</p>
-                  </div>
+                <div className="flex flex-wrap text-muted-foreground mt-4 space-x-4 text-sm">
+                  {dbUser.location && <span>{dbUser.location}</span>}
+                  {dbUser.website && (
+                    <a href={dbUser.website} target="_blank" rel="noreferrer" className="text-primary hover:underline break-all">{dbUser.website}</a>
+                  )}
                 </div>
 
-                <div className="p-4 bg-muted rounded-lg">
-                  <h4 className="font-medium text-foreground mb-2">JSON Verisi</h4>
-                  <pre className="text-xs text-muted-foreground overflow-auto">
-                    {JSON.stringify(dbUser, null, 2)}
-                  </pre>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  {dbUser.created_at && (
+                    <span>Katıldı: {new Date(dbUser.created_at).toLocaleDateString('tr-TR')}</span>
+                  )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
+
+            {/* İçerik Sekmesi ve Gönderiler */}
+            <div className="border-b border-border">
+              <nav className="flex">
+                <button className="w-full py-4 font-bold text-foreground border-b-2 border-primary">Pikolar</button>
+                <button className="w-full py-4 font-semibold text-muted-foreground hover:bg-accent transition">Yanıtlar</button>
+                <button className="w-full py-4 font-semibold text-muted-foreground hover:bg-accent transition">Medya</button>
+                <button className="w-full py-4 font-semibold text-muted-foreground hover:bg-accent transition">Beğeniler</button>
+              </nav>
+            </div>
+
+            <div className="space-y-3 divide-y divide-border">
+              {postsLoading ? (
+                <div className="p-4 text-sm text-muted-foreground">Gönderiler yükleniyor...</div>
+              ) : posts.length === 0 ? (
+                <div className="p-4 text-sm text-muted-foreground text-center">Henüz gönderi yok.</div>
+              ) : (
+                posts.map((post) => (
+                  <div key={post.id} className="p-0">
+                    <PostCard
+                      post={post}
+                      canDelete={user?.id === post.author_id}
+                      onDelete={async (postId: string) => {
+                        if (!user) return
+                        const ok = await deletePost(postId, user.id)
+                        if (ok) setPosts((prev) => prev.filter((p) => p.id !== postId))
+                      }}
+                      onLike={async (postId: string) => {
+                        if (!user) return
+                        await togglePostLike(postId, user.id)
+                      }}
+                      onRetweet={async (postId: string) => {
+                        if (!user) return
+                        await togglePostRetweet(postId, user.id)
+                      }}
+                      onBookmark={async (postId: string) => {
+                        if (!user) return
+                        await togglePostBookmark(postId, user.id)
+                      }}
+                      onComment={() => {}}
+                    />
+                  </div>
+                ))
+              )}
+            </div>
           </div>
+
+          {/* Sağ Sidebar (profilde gizlendi) */}
+          <div className="hidden lg:block" />
         </div>
       </main>
     </div>

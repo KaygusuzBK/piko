@@ -234,14 +234,15 @@ export async function getPosts(limit: number = 20, offset: number = 0, userId?: 
     }
 
     // Kullanıcı etkileşimlerini işle
-    const processedPosts = posts?.map(post => {
-      const userInteractions = post.user_interactions?.filter(interaction => 
-        interaction.user_id === userId
+    const processedPosts = posts?.map((post) => {
+      type Interaction = { type: 'like' | 'retweet' | 'bookmark'; user_id: string }
+      const interactions = (post.user_interactions as Interaction[] | undefined)?.filter((i) => 
+        i.user_id === userId
       ) || []
 
-      const isLiked = userInteractions.some(interaction => interaction.type === 'like')
-      const isRetweeted = userInteractions.some(interaction => interaction.type === 'retweet')
-      const isBookmarked = userInteractions.some(interaction => interaction.type === 'bookmark')
+      const isLiked = interactions.some((i) => i.type === 'like')
+      const isRetweeted = interactions.some((i) => i.type === 'retweet')
+      const isBookmarked = interactions.some((i) => i.type === 'bookmark')
 
       return {
         ...post,
@@ -634,5 +635,30 @@ export async function getUserPostInteractions(userId: string, postIds: string[])
   } catch (error) {
     console.error('Error fetching user interactions:', error)
     return []
+  }
+}
+
+// Kullanıcı kendi gönderisini silebilsin
+export async function deletePost(postId: string, userId: string): Promise<boolean> {
+  try {
+    const supabase = createClient()
+
+    // Sahiplik kontrolü ile sil
+    const { error } = await supabase
+      .from('posts')
+      .delete()
+      .eq('id', postId)
+      .eq('author_id', userId)
+
+    if (error) {
+      console.error('Error deleting post:', error)
+      return false
+    }
+
+    // İlişkili etkileşimleri temizlemek isterseniz, DB'de ON DELETE CASCADE önerilir
+    return true
+  } catch (error) {
+    console.error('Error deleting post:', error)
+    return false
   }
 }

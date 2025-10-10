@@ -7,8 +7,8 @@ import { Users, Sparkles } from 'lucide-react'
 export function RightSidebar() {
   return (
     <div className="hidden md:block lg:col-span-1">
-      <div className="sticky top-20 space-y-4 h-[calc(100vh-8rem)] overflow-y-auto scrollbar-hide">
-        <Card className="border-border bg-card">
+      <div className="sticky top-0 space-y-4 h-screen overflow-y-auto scrollbar-hide">
+        <Card className="border-none bg-transparent shadow-none">
           <CardHeader className="pb-3">
             <CardTitle className="text-base sm:text-lg text-foreground">Kimleri Takip Ediyorsun</CardTitle>
           </CardHeader>
@@ -19,7 +19,7 @@ export function RightSidebar() {
           </CardContent>
         </Card>
 
-        <Card className="border-border bg-card">
+        <Card className="border-none bg-transparent shadow-none mt-4">
           <CardContent className="p-3 sm:p-4">
             <div className="text-center space-y-2">
               <Users className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-muted-foreground" />
