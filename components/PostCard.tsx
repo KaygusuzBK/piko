@@ -153,11 +153,18 @@ export function PostCard({
                   onClick={handleRetweet}
                   className={`flex items-center space-x-1 h-6 sm:h-7 px-1 sm:px-2 transition-all duration-200 hover:scale-110 ${
                     isRetweeted 
-                      ? 'text-accent' 
-                      : 'text-muted-foreground hover:text-accent'
+                      ? 'text-pink-500 dark:text-pink-400' 
+                      : 'text-muted-foreground hover:text-pink-500 dark:hover:text-pink-400'
                   }`}
                 >
-                  <RotateCcw className={`h-3 w-3 sm:h-4 sm:w-4 transition-all duration-200 hover:rotate-180 ${isRetweeted ? 'fill-current' : ''}`} />
+                  <RotateCcw
+                    className={`h-3 w-3 sm:h-4 sm:w-4 transition-all duration-200 hover:rotate-180 ${
+                      isRetweeted
+                        ? 'text-pink-500 dark:text-pink-400'
+                        : 'text-muted-foreground'
+                    }`}
+                    strokeWidth={2.5}
+                  />
                   <span className="text-xs font-medium">{retweetsCount}</span>
                 </Button>
                 
@@ -181,11 +188,17 @@ export function PostCard({
                   onClick={handleBookmark}
                   className={`flex items-center space-x-1 h-6 sm:h-7 px-1 sm:px-2 transition-all duration-200 hover:scale-110 ${
                     isBookmarked 
-                      ? 'text-accent' 
-                      : 'text-muted-foreground hover:text-accent'
+                      ? 'text-yellow-500 dark:text-yellow-400' 
+                      : 'text-muted-foreground hover:text-yellow-500 dark:hover:text-yellow-400'
                   }`}
                 >
-                  <Star className={`h-3 w-3 sm:h-4 sm:w-4 transition-all duration-200 hover:rotate-12 ${isBookmarked ? 'fill-current' : ''}`} />
+                  <Star
+                    className={`h-3 w-3 sm:h-4 sm:w-4 transition-all duration-200 hover:rotate-12 ${
+                      isBookmarked
+                        ? 'text-yellow-500 dark:text-yellow-400 fill-current'
+                        : 'text-muted-foreground'
+                    }`}
+                  />
                 </Button>
               </div>
               

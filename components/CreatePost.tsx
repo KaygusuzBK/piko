@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import { useAuthStore } from '@/stores/authStore'
 import { createPost, CreatePostData } from '@/lib/posts'
-import { Send, Image, Zap } from 'lucide-react'
+import { Send, Image as ImageIcon, Zap } from 'lucide-react'
 
 interface CreatePostProps {
   onPostCreated?: () => void
@@ -107,8 +107,8 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
                   // Focus olduğunda: alt satırda butonlar - justify-between ile iki uzak köşe
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center space-x-2">
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground">
-                        <Image className="h-3 w-3" aria-hidden="true" />
+                      <Button variant="ghost" size="icon" className="group h-6 w-6 text-muted-foreground hover:text-foreground active:text-pink-500 dark:active:text-pink-400">
+                        <ImageIcon className="h-3 w-3 group-active:text-pink-500 dark:group-active:text-pink-400" aria-hidden="true" />
                       </Button>
                       <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground">
                         <Zap className="h-3 w-3" />
@@ -131,8 +131,8 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
                 ) : (
                   // Focus olmadığında: tüm iconlar sağ köşede
                   <div className="flex items-center justify-end w-full space-x-1">
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground">
-                      <Image className="h-4 w-4" aria-hidden="true" />
+                    <Button variant="ghost" size="icon" className="group h-6 w-6 text-muted-foreground hover:text-foreground active:text-pink-500 dark:active:text-pink-400">
+                      <ImageIcon className="h-4 w-4 group-active:text-pink-500 dark:group-active:text-pink-400" aria-hidden="true" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground">
                       <Zap className="h-4 w-4" />
@@ -169,8 +169,8 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
                 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-1 sm:space-x-2">
-                    <Button variant="ghost" size="icon" className="h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-110">
-                      <Image className="h-3 w-3 transition-transform duration-200 hover:rotate-12" aria-hidden="true" />
+                    <Button variant="ghost" size="icon" className="group h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-foreground active:text-pink-500 dark:active:text-pink-400 transition-all duration-200 hover:scale-110">
+                      <ImageIcon className="h-3 w-3 transition-transform duration-200 hover:rotate-12 group-active:text-pink-500 dark:group-active:text-pink-400" aria-hidden="true" />
                       <span className="sr-only">Resim ekle</span>
                     </Button>
                     <Button variant="ghost" size="icon" className="h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-110">
