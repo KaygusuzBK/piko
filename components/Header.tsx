@@ -43,7 +43,7 @@ export function Header() {
 
   const handleSearch = useCallback(async (query: string) => {
     const trimmed = query.trim()
-    if (!searchOpen || !trimmed) {
+    if (!trimmed) {
       setSearchResults([])
       return
     }
@@ -58,7 +58,7 @@ export function Header() {
     } finally {
       setSearchLoading(false)
     }
-  }, [searchOpen])
+  }, [])
 
   // Debounced search
   useEffect(() => {
@@ -67,7 +67,7 @@ export function Header() {
     }, 300)
 
     return () => clearTimeout(timeoutId)
-  }, [searchQuery, searchOpen, handleSearch])
+  }, [searchQuery, handleSearch])
 
   const handleUserSelect = (userId: string) => {
     setSearchOpen(false)
