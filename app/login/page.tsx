@@ -19,8 +19,8 @@ export default function LoginPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Yükleniyor...</div>
+      <div className="min-h-screen flex items-center justify-center bg-transparent">
+        <div className="text-lg text-foreground">Yükleniyor...</div>
       </div>
     )
   }
@@ -30,7 +30,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex items-center justify-center bg-transparent p-4">
       <div className="w-full max-w-md">
         <LoginForm 
           onGitHubLogin={signInWithGitHub}
