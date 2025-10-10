@@ -61,10 +61,10 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
 
   return (
     <Card className={`w-full border transition-all duration-300 ${
-      isCompact && !isFocused ? 'bg-transparent border-transparent shadow-none h-6' : 'border-border bg-card'
+      isCompact && !isFocused ? 'bg-transparent border-transparent shadow-none h-6' : 'border-border bg-card dark:bg-transparent card-dark-gradient'
     }`}>
       <CardContent className={`transition-all duration-300 w-full ${
-        isCompact && !isFocused ? 'p-0 h-6 flex items-center justify-between' : 'p-1 sm:p-2'
+        isCompact && !isFocused ? 'h-6 flex items-center justify-between px-2' : 'p-1 sm:p-2'
       }`}>
         <div className={`flex space-x-1 sm:space-x-2 ${
           isCompact && !isFocused ? 'w-full justify-between' : ''
@@ -97,7 +97,7 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => setIsFocused(false)}
                   placeholder="Ne düşünüyorsun?"
-                  className={`w-full resize-none border-0 bg-transparent text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-0 text-foreground transition-all duration-200 ${
+                  className={`w-full resize-none border-0 bg-transparent text-xs placeholder:text-muted-foreground dark:placeholder:text-white/70 focus:outline-none focus:ring-0 text-foreground dark:text-white transition-all duration-200 ${
                     isFocused ? 'min-h-[60px]' : 'h-6'
                   }`}
                   maxLength={280}
@@ -107,15 +107,15 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
                   // Focus olduğunda: alt satırda butonlar - justify-between ile iki uzak köşe
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center space-x-2">
-                      <Button variant="ghost" size="icon" className="group h-6 w-6 text-muted-foreground hover:text-foreground active:text-pink-500 dark:active:text-pink-400">
+                      <Button variant="ghost" size="icon" className="group h-6 w-6 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white active:text-pink-500 dark:active:text-pink-400">
                         <ImageIcon className="h-3 w-3 group-active:text-pink-500 dark:group-active:text-pink-400" aria-hidden="true" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground">
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white">
                         <Zap className="h-3 w-3" />
                       </Button>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <span className={`text-xs ${content.length > 250 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                      <span className={`text-xs ${content.length > 250 ? 'text-red-400' : 'text-muted-foreground dark:text-white/60'}`}>
                         {content.length}/280
                       </span>
                       <Button
@@ -131,13 +131,13 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
                 ) : (
                   // Focus olmadığında: tüm iconlar sağ köşede
                   <div className="flex items-center justify-end w-full space-x-1">
-                    <Button variant="ghost" size="icon" className="group h-6 w-6 text-muted-foreground hover:text-foreground active:text-pink-500 dark:active:text-pink-400">
+                    <Button variant="ghost" size="icon" className="group h-6 w-6 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white active:text-pink-500 dark:active:text-pink-400">
                       <ImageIcon className="h-4 w-4 group-active:text-pink-500 dark:group-active:text-pink-400" aria-hidden="true" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground">
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white">
                       <Zap className="h-4 w-4" />
                     </Button>
-                    <span className={`text-xs ${content.length > 250 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                    <span className={`text-xs ${content.length > 250 ? 'text-red-400' : 'text-muted-foreground dark:text-white/60'}`}>
                       {content.length}/280
                     </span>
                     <Button
@@ -161,7 +161,7 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => setIsFocused(false)}
                   placeholder="Ne düşünüyorsun?"
-                  className={`w-full resize-none border-0 bg-transparent text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-0 text-foreground transition-all duration-200 ${
+                  className={`w-full resize-none border-0 bg-transparent text-xs sm:text-sm placeholder:text-muted-foreground dark:placeholder:text-white/70 focus:outline-none focus:ring-0 text-foreground dark:text-white transition-all duration-200 ${
                     isFocused ? 'min-h-[60px]' : 'min-h-[20px]'
                   }`}
                   maxLength={280}
@@ -169,18 +169,18 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
                 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-1 sm:space-x-2">
-                    <Button variant="ghost" size="icon" className="group h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-foreground active:text-pink-500 dark:active:text-pink-400 transition-all duration-200 hover:scale-110">
+                    <Button variant="ghost" size="icon" className="group h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white active:text-pink-500 dark:active:text-pink-400 transition-all duration-200 hover:scale-110">
                       <ImageIcon className="h-3 w-3 transition-transform duration-200 hover:rotate-12 group-active:text-pink-500 dark:group-active:text-pink-400" aria-hidden="true" />
                       <span className="sr-only">Resim ekle</span>
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-110">
+                    <Button variant="ghost" size="icon" className="h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white transition-all duration-200 hover:scale-110">
                       <Zap className="h-3 w-3 transition-transform duration-200 hover:scale-125" />
                       <span className="sr-only">Özel efekt ekle</span>
                     </Button>
                   </div>
                   
                   <div className="flex items-center space-x-2 sm:space-x-3">
-                    <span className={`text-xs sm:text-sm ${content.length > 250 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                    <span className={`text-xs sm:text-sm ${content.length > 250 ? 'text-red-400' : 'text-muted-foreground dark:text-white/60'}`}>
                       {content.length}/280
                     </span>
                     <Separator orientation="vertical" className="h-2 sm:h-3" />
