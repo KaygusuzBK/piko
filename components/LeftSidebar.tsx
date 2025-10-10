@@ -11,6 +11,8 @@ import {
   User, 
   Settings,
 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useAuthStore } from '@/stores/authStore'
 
 interface LeftSidebarProps {
   iconsOnly?: boolean
@@ -18,6 +20,8 @@ interface LeftSidebarProps {
 }
 
 export function LeftSidebar({ iconsOnly = false, hideExtras = false }: LeftSidebarProps) {
+  const router = useRouter()
+  const { user } = useAuthStore()
   return (
     <div className={`hidden lg:block lg:col-span-1`}>
       <div className="sticky top-0 h-screen overflow-y-auto scrollbar-hide space-y-4">
@@ -25,27 +29,27 @@ export function LeftSidebar({ iconsOnly = false, hideExtras = false }: LeftSideb
           <Card className="border-none bg-transparent shadow-none">
             <CardContent className="p-3 sm:p-4">
               <div className="space-y-3 sm:space-y-4">
-                <Button variant="ghost" className="w-full justify-start text-foreground hover:text-foreground hover:bg-piko-gradient transition-all duration-200 hover:scale-105">
+                <Button onClick={() => router.push('/')} variant="ghost" className="w-full justify-start text-foreground hover:text-white hover:bg-piko-gradient transition-all duration-200 hover:scale-105">
                   <HomeIcon className="mr-3 h-5 w-5 transition-transform duration-200 hover:rotate-12" />
                   <span className="text-sm sm:text-base">Ana Sayfa</span>
                 </Button>
-                <Button variant="ghost" className="w-full justify-start text-foreground hover:text-foreground hover:bg-piko-gradient transition-all duration-200 hover:scale-105">
+                <Button variant="ghost" className="w-full justify-start text-foreground hover:text-white hover:bg-piko-gradient transition-all duration-200 hover:scale-105">
                   <Search className="mr-3 h-5 w-5 transition-transform duration-200 hover:rotate-12" />
                   <span className="text-sm sm:text-base">Keşfet</span>
                 </Button>
-                <Button variant="ghost" className="w-full justify-start text-foreground hover:text-foreground hover:bg-piko-gradient transition-all duration-200 hover:scale-105">
+                <Button variant="ghost" className="w-full justify-start text-foreground hover:text-white hover:bg-piko-gradient transition-all duration-200 hover:scale-105">
                   <Bell className="mr-3 h-5 w-5 transition-transform duration-200 hover:rotate-12" />
                   <span className="text-sm sm:text-base">Bildirimler</span>
                 </Button>
-                <Button variant="ghost" className="w-full justify-start text-foreground hover:text-foreground hover:bg-piko-gradient transition-all duration-200 hover:scale-105">
+                <Button variant="ghost" className="w-full justify-start text-foreground hover:text-white hover:bg-piko-gradient transition-all duration-200 hover:scale-105">
                   <Mail className="mr-3 h-5 w-5 transition-transform duration-200 hover:rotate-12" />
                   <span className="text-sm sm:text-base">Mesajlar</span>
                 </Button>
-                <Button variant="ghost" className="w-full justify-start text-foreground hover:text-foreground hover:bg-piko-gradient transition-all duration-200 hover:scale-105">
+                <Button onClick={() => router.push('/favorites')} variant="ghost" className="w-full justify-start text-foreground hover:text-white hover:bg-piko-gradient transition-all duration-200 hover:scale-105">
                   <Star className="mr-3 h-5 w-5 transition-transform duration-200 hover:rotate-12" />
                   <span className="text-sm sm:text-base">Favoriler</span>
                 </Button>
-                <Button variant="ghost" className="w-full justify-start text-foreground hover:text-foreground hover:bg-piko-gradient transition-all duration-200 hover:scale-105">
+                <Button onClick={() => user?.id && router.push(`/users/${user.id}`)} variant="ghost" className="w-full justify-start text-foreground hover:text-white hover:bg-piko-gradient transition-all duration-200 hover:scale-105">
                   <User className="mr-3 h-5 w-5 transition-transform duration-200 hover:rotate-12" />
                   <span className="text-sm sm:text-base">Profil</span>
                 </Button>

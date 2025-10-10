@@ -108,11 +108,11 @@ export default function Home() {
   }
 
       return (
-        <div className="h-screen bg-background flex flex-col overflow-hidden">
+        <div className="h-screen flex flex-col overflow-hidden">
           <Header />
 
-          <main className="flex-1 max-w-7xl mx-auto w-full py-4 sm:py-6 px-3 sm:px-4 overflow-hidden">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 flex-1">
+          <main className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-4 pt-4 sm:pt-6 pb-0 overflow-hidden min-h-0">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 h-full min-h-0">
           {/* Left Sidebar */}
           <LeftSidebar />
 
@@ -126,6 +126,11 @@ export default function Home() {
             onRetweet={handleRetweet}
             onBookmark={handleBookmark}
             onComment={handleComment}
+            currentUserId={user.id}
+            onDelete={() => {
+              // Silme sonrası feed'i yenilemek için
+              handlePostCreated()
+            }}
           />
 
           {/* Right Sidebar */}
