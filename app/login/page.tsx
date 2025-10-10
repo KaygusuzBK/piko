@@ -19,8 +19,8 @@ export default function LoginPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Yükleniyor...</div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-lg text-foreground">Yükleniyor...</div>
       </div>
     )
   }
