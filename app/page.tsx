@@ -7,7 +7,7 @@ import { Header } from '@/components/Header'
 import { MainFeed } from '@/components/MainFeed'
 import { LeftSidebar } from '@/components/LeftSidebar'
 import { RightSidebar } from '@/components/RightSidebar'
-import { getPosts, PostWithAuthor, toggleLike, toggleRetweet } from '@/lib/posts'
+import { getPosts, PostWithAuthor, toggleLike, toggleRetweet, togglePostBookmark, getUserInteractionStatus } from '@/lib/posts'
 // import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 // import { Button } from '@/components/ui/button'
 // import { Separator } from '@/components/ui/separator'
@@ -77,12 +77,13 @@ export default function Home() {
     if (!user?.id) return
     
     try {
-      const isLiked = await toggleLike(postId, user.id)
-      console.log(isLiked ? 'Post liked' : 'Post unliked')
-      
-      // Feed'i yenileme - PostCard zaten optimistic update yapıyor
+      await toggleLike(postId, user.id)
+      // Refresh interaction status for this post
+      const fetchedPosts = await getPosts(1000, 0, user.id)
+      setPosts(fetchedPosts)
     } catch (error) {
       console.error('Error toggling like:', error)
+      throw error
     }
   }
 
@@ -90,17 +91,39 @@ export default function Home() {
     if (!user?.id) return
     
     try {
-      const isRetweeted = await toggleRetweet(postId, user.id)
-      console.log(isRetweeted ? 'Post retweeted' : 'Post unretweeted')
-      
-      // Feed'i yenileme - PostCard zaten optimistic update yapıyor
+      await toggleRetweet(postId, user.id)
+      // Check current retweet status; if retweeted, move post to top
+      const status = await getUserInteractionStatus(postId, user.id)
+      if (status.isRetweeted) {
+        setPosts((prev) => {
+          const idx = prev.findIndex(p => p.id === postId)
+          if (idx === -1) return prev
+          const post = prev[idx]
+          const rest = [...prev.slice(0, idx), ...prev.slice(idx + 1)]
+          return [post, ...rest]
+        })
+      } else {
+        // If un-retweeted, refresh to restore natural order
+        const fetchedPosts = await getPosts(1000, 0, user.id)
+        setPosts(fetchedPosts)
+      }
     } catch (error) {
       console.error('Error toggling retweet:', error)
+      throw error
     }
   }
 
-  const handleBookmark = (postId: string) => {
-    console.log('Bookmarked post:', postId)
+  const handleBookmark = async (postId: string) => {
+    if (!user?.id) return
+    try {
+      await togglePostBookmark(postId, user.id)
+      // Refresh interaction status for this post
+      const fetchedPosts = await getPosts(1000, 0, user.id)
+      setPosts(fetchedPosts)
+    } catch (error) {
+      console.error('Error toggling bookmark:', error)
+      throw error
+    }
   }
 
   const handleComment = (postId: string) => {

@@ -25,9 +25,9 @@ import { PostWithAuthor } from '@/lib/posts'
 
 interface PostCardProps {
   post: PostWithAuthor
-  onLike?: (postId: string) => void
-  onRetweet?: (postId: string) => void
-  onBookmark?: (postId: string) => void
+  onLike?: (postId: string) => Promise<void>
+  onRetweet?: (postId: string) => Promise<void>
+  onBookmark?: (postId: string) => Promise<void>
   onComment?: (postId: string) => void
   canDelete?: boolean
   onDelete?: (postId: string) => void
@@ -57,21 +57,49 @@ export function PostCard({
     }
   }, [post.user_interaction_status])
 
-  const handleLike = () => {
-    setIsLiked(!isLiked)
-    setLikesCount(prev => isLiked ? prev - 1 : prev + 1)
-    onLike?.(post.id)
+  const handleLike = async () => {
+    const prevLiked = isLiked
+    const prevCount = likesCount
+    // Optimistic update
+    setIsLiked(!prevLiked)
+    setLikesCount(prevLiked ? prevCount - 1 : prevCount + 1)
+    
+    try {
+      await onLike?.(post.id)
+    } catch (error) {
+      // Revert on error
+      setIsLiked(prevLiked)
+      setLikesCount(prevCount)
+    }
   }
 
-  const handleRetweet = () => {
-    setIsRetweeted(!isRetweeted)
-    setRetweetsCount(prev => isRetweeted ? prev - 1 : prev + 1)
-    onRetweet?.(post.id)
+  const handleRetweet = async () => {
+    const prevRetweeted = isRetweeted
+    const prevCount = retweetsCount
+    // Optimistic update
+    setIsRetweeted(!prevRetweeted)
+    setRetweetsCount(prevRetweeted ? prevCount - 1 : prevCount + 1)
+    
+    try {
+      await onRetweet?.(post.id)
+    } catch (error) {
+      // Revert on error
+      setIsRetweeted(prevRetweeted)
+      setRetweetsCount(prevCount)
+    }
   }
 
-  const handleBookmark = () => {
-    setIsBookmarked(!isBookmarked)
-    onBookmark?.(post.id)
+  const handleBookmark = async () => {
+    const prevBookmarked = isBookmarked
+    // Optimistic update
+    setIsBookmarked(!prevBookmarked)
+    
+    try {
+      await onBookmark?.(post.id)
+    } catch (error) {
+      // Revert on error
+      setIsBookmarked(prevBookmarked)
+    }
   }
 
   const handleComment = () => {
@@ -92,22 +120,15 @@ export function PostCard({
 
   return (
         <Card
-          className="w-full border border-border transition-colors duration-200 bg-card dark:bg-transparent card-dark-gradient"
+          className="w-full border border-border bg-[#171717]"
         >
           <CardContent className="p-2 sm:p-3">
-        <div className="flex space-x-2 sm:space-x-3 transition-transform duration-500">
+        <div className="flex space-x-2 sm:space-x-3 transition-transform duration-500 relative">
+          {/* Soft gradient in top-left corner */}
+          <div className="absolute -top-2 -left-2 w-16 h-16 bg-gradient-to-br from-[#BF092F]/20 to-transparent rounded-full blur-xl pointer-events-none" />
+          
           <div className="relative h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
-            <div
-              className="absolute inset-0 rounded-full pointer-events-none"
-              style={{
-                background:
-                  'radial-gradient(circle, rgba(191,9,47,0.75) 0%, rgba(191,9,47,0.45) 55%, rgba(191,9,47,0) 80%)',
-                filter: 'blur(3px)',
-                transform: 'scale(1.6)'
-              }}
-            />
-            <div className="h-full w-full rounded-full p-[2px] bg-black dark:bg-[#BF092F]">
-            <Avatar className="h-full w-full rounded-full">
+            <Avatar className="h-full w-full rounded-full border-2 border-[#BF092F]/30">
               <AvatarImage 
                 src={post.author.avatar_url} 
                 alt={post.author.username}
@@ -117,7 +138,6 @@ export function PostCard({
                 {post.author.username.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            </div>
           </div>
           
           <div className="flex-1 space-y-1 min-w-0 text-foreground dark:text-white">

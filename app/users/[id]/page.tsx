@@ -11,7 +11,8 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import { User as DbUser } from '@/lib/users'
 import { PostCard } from '@/components/PostCard'
-import { PostWithAuthor, getUserPosts, togglePostBookmark, togglePostLike, togglePostRetweet, deletePost } from '@/lib/posts'
+import { PostWithAuthor, getUserPosts, getUserLikedPosts, getUserFavoritePosts, togglePostBookmark, togglePostLike, togglePostRetweet, deletePost } from '@/lib/posts'
+import { Camera, Edit2 } from 'lucide-react'
 
 interface UserDetailPageProps {
   params: Promise<{ id: string }>
@@ -23,7 +24,10 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
   const router = useRouter()
   const [dbUser, setDbUser] = useState<DbUser | null>(null)
   const [userLoading, setUserLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<'posts' | 'replies' | 'media' | 'likes' | 'favorites'>('posts')
   const [posts, setPosts] = useState<PostWithAuthor[]>([])
+  const [likedPosts, setLikedPosts] = useState<PostWithAuthor[]>([])
+  const [favoritePosts, setFavoritePosts] = useState<PostWithAuthor[]>([])
   const [postsLoading, setPostsLoading] = useState(true)
   const userLoadedRef = useRef<string | null>(null)
   const postsLoadedRef = useRef<string | null>(null)
@@ -60,15 +64,21 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
     if (!user) return
     if (postsLoadedRef.current === paramsId) return
 
-    const loadPosts = async () => {
+    const load = async () => {
       setPostsLoading(true)
-      const data = await getUserPosts(paramsId)
-      setPosts(data)
+      const [p, lp, fp] = await Promise.all([
+        getUserPosts(paramsId, 20, 0, user.id),
+        getUserLikedPosts(paramsId, 20, 0, user.id),
+        getUserFavoritePosts(paramsId, 20, 0, user.id)
+      ])
+      setPosts(p)
+      setLikedPosts(lp)
+      setFavoritePosts(fp)
       setPostsLoading(false)
       postsLoadedRef.current = paramsId
     }
 
-    loadPosts()
+    load()
   }, [loading, user, user?.id, paramsId])
 
   // Scroll dinleyicisi: profil üst bölümü kompakt moda geçsin
@@ -180,49 +190,51 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
             <div>
               {/* Banner */}
               <div
-                className={`bg-cover bg-center transition-all duration-300 ${isCompact ? 'h-40' : 'h-56 lg:h-72'}`}
+                className={`relative group bg-cover bg-center transition-all duration-300 ${isCompact ? 'h-40' : 'h-56 lg:h-72'}`}
                 style={{ backgroundImage: dbUser.banner_url ? `url(${dbUser.banner_url})` : undefined }}
               >
                 {!dbUser.banner_url && (
                   <div className="w-full h-full bg-piko-header" />
+                )}
+                {user?.id === dbUser.id && (
+                  <label className="absolute inset-0 hidden group-hover:flex items-center justify-center bg-black/30 cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        const url = await uploadUserImage(user.id, file, 'banner')
+                        if (url) {
+                          const updated = await updateUserById(user.id, { banner_url: url })
+                          if (updated) setDbUser(updated)
+                        }
+                      }}
+                    />
+                    <span className="inline-flex items-center gap-2 text-white font-medium px-3 py-2 rounded-md bg-black/50">
+                      <Camera className="h-4 w-4" /> Bannerı değiştir
+                    </span>
+                  </label>
                 )}
               </div>
 
               {/* Bilgiler */}
               <div className="p-4">
                 <div className="flex justify-between items-start">
-                  <Avatar className={`border-4 border-background transition-all duration-300 ${isCompact ? 'w-24 h-24 -mt-12' : 'w-28 h-28 lg:w-32 lg:h-32 -mt-16 lg:-mt-20'}`}>
-                    <AvatarImage 
-                      src={dbUser.avatar_url} 
-                      alt={dbUser.name || 'Kullanıcı'} 
-                      className="object-cover"
-                    />
-                    <AvatarFallback className={`${isCompact ? 'text-lg' : 'text-2xl'}`}>
-                      {dbUser.name?.charAt(0) || dbUser.email?.charAt(0) || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  {user?.id === dbUser.id && !isCompact && (
-                    <label className="mt-2 font-bold inline-flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0]
-                          if (!file) return
-                          const url = await uploadUserImage(user.id, file, 'banner')
-                          if (url) {
-                            const updated = await updateUserById(user.id, { banner_url: url })
-                            if (updated) setDbUser(updated)
-                          }
-                        }}
+                  <div className="relative group">
+                    <Avatar className={`border-4 border-background transition-all duration-300 ${isCompact ? 'w-24 h-24 -mt-12' : 'w-28 h-28 lg:w-32 lg:h-32 -mt-16 lg:-mt-20'}`}>
+                      <AvatarImage 
+                        src={dbUser.avatar_url} 
+                        alt={dbUser.name || 'Kullanıcı'} 
+                        className="object-cover"
                       />
-                      <span className="px-3 py-1 rounded-md border border-border bg-background/60 hover:bg-background/80">Banner Değiştir</span>
-                    </label>
-                  )}
-                  {user?.id === dbUser.id && !isCompact && (
-                    <div className="flex gap-2 mt-2">
-                      <label className="font-bold inline-flex items-center gap-2 cursor-pointer">
+                      <AvatarFallback className={`${isCompact ? 'text-lg' : 'text-2xl'}`}>
+                        {dbUser.name?.charAt(0) || dbUser.email?.charAt(0) || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    {user?.id === dbUser.id && (
+                      <label className="absolute inset-0 hidden group-hover:flex items-center justify-center rounded-full bg-black/40 cursor-pointer">
                         <input
                           type="file"
                           accept="image/*"
@@ -237,10 +249,14 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
                             }
                           }}
                         />
-                        <span className="px-3 py-1 rounded-md border border-border bg-background/60 hover:bg-background/80">Avatar Değiştir</span>
+                        <span className="inline-flex items-center gap-2 text-white font-medium px-3 py-1.5 rounded-full bg-black/60">
+                          <Edit2 className="h-4 w-4" /> Avatarı değiştir
+                        </span>
                       </label>
-                      <Button variant="outline" onClick={() => router.push(`/users/${dbUser.id}/edit`)}>Profili Düzenle</Button>
-                    </div>
+                    )}
+                  </div>
+                  {user?.id === dbUser.id && !isCompact && (
+                    <Button variant="outline" onClick={() => router.push(`/users/${dbUser.id}/edit`)}>Profili Düzenle</Button>
                   )}
                 </div>
 
@@ -271,45 +287,102 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
             {/* İçerik Sekmesi ve Gönderiler */}
             <div className="border-b border-border">
               <nav className="flex">
-                <button className="w-full py-4 font-bold text-foreground border-b-2 border-primary">Pikolar</button>
-                <button className="w-full py-4 font-semibold text-muted-foreground hover:bg-accent transition">Yanıtlar</button>
-                <button className="w-full py-4 font-semibold text-muted-foreground hover:bg-accent transition">Medya</button>
-                <button className="w-full py-4 font-semibold text-muted-foreground hover:bg-accent transition">Beğeniler</button>
+                <button
+                  className={`w-full py-4 font-semibold transition border-b-2 ${activeTab === 'posts' ? 'text-foreground border-primary' : 'text-muted-foreground hover:bg-accent border-transparent'}`}
+                  onClick={() => setActiveTab('posts')}
+                >
+                  Pikolar
+                </button>
+                <button
+                  className={`w-full py-4 font-semibold transition border-b-2 ${activeTab === 'replies' ? 'text-foreground border-primary' : 'text-muted-foreground hover:bg-accent border-transparent'}`}
+                  onClick={() => setActiveTab('replies')}
+                >
+                  Yanıtlar
+                </button>
+                <button
+                  className={`w-full py-4 font-semibold transition border-b-2 ${activeTab === 'media' ? 'text-foreground border-primary' : 'text-muted-foreground hover:bg-accent border-transparent'}`}
+                  onClick={() => setActiveTab('media')}
+                >
+                  Medya
+                </button>
+                <button
+                  className={`w-full py-4 font-semibold transition border-b-2 ${activeTab === 'likes' ? 'text-foreground border-primary' : 'text-muted-foreground hover:bg-accent border-transparent'}`}
+                  onClick={() => setActiveTab('likes')}
+                >
+                  Beğeniler
+                </button>
+                <button
+                  className={`w-full py-4 font-semibold transition border-b-2 ${activeTab === 'favorites' ? 'text-foreground border-primary' : 'text-muted-foreground hover:bg-accent border-transparent'}`}
+                  onClick={() => setActiveTab('favorites')}
+                >
+                  Favoriler
+                </button>
               </nav>
             </div>
 
             <div className="space-y-3 divide-y divide-border">
               {postsLoading ? (
-                <div className="p-4 text-sm text-muted-foreground">Gönderiler yükleniyor...</div>
-              ) : posts.length === 0 ? (
-                <div className="p-4 text-sm text-muted-foreground text-center">Henüz gönderi yok.</div>
+                <div className="p-4 text-sm text-muted-foreground">Yükleniyor...</div>
               ) : (
-                posts.map((post) => (
-                  <div key={post.id} className="p-0">
-                    <PostCard
-                      post={post}
-                      canDelete={user?.id === post.author_id}
-                      onDelete={async (postId: string) => {
-                        if (!user) return
-                        const ok = await deletePost(postId, user.id)
-                        if (ok) setPosts((prev) => prev.filter((p) => p.id !== postId))
-                      }}
-                      onLike={async (postId: string) => {
-                        if (!user) return
-                        await togglePostLike(postId, user.id)
-                      }}
-                      onRetweet={async (postId: string) => {
-                        if (!user) return
-                        await togglePostRetweet(postId, user.id)
-                      }}
-                      onBookmark={async (postId: string) => {
-                        if (!user) return
-                        await togglePostBookmark(postId, user.id)
-                      }}
-                      onComment={() => {}}
-                    />
+                (activeTab === 'posts' ? posts : activeTab === 'likes' ? likedPosts : activeTab === 'favorites' ? favoritePosts : []).length === 0 ? (
+                  <div className="p-4 text-sm text-muted-foreground text-center">
+                    {activeTab === 'posts' ? 'Henüz gönderi yok.' : activeTab === 'likes' ? 'Henüz beğeni yok.' : activeTab === 'favorites' ? 'Henüz favori yok.' : 'İçerik bulunamadı.'}
                   </div>
-                ))
+                ) : (
+                  (activeTab === 'posts' ? posts : activeTab === 'likes' ? likedPosts : favoritePosts).map((post) => (
+                    <div key={post.id} className="p-0">
+                      <PostCard
+                        post={post}
+                        canDelete={user?.id === post.author_id}
+                        onDelete={async (postId: string) => {
+                          if (!user) return
+                          const ok = await deletePost(postId, user.id)
+                          if (ok) setPosts((prev) => prev.filter((p) => p.id !== postId))
+                        }}
+                        onLike={async (postId: string) => {
+                          if (!user) return
+                          await togglePostLike(postId, user.id)
+                          // Refresh all tabs to sync interaction status
+                          const [p, lp, fp] = await Promise.all([
+                            getUserPosts(paramsId, 20, 0, user.id),
+                            getUserLikedPosts(paramsId, 20, 0, user.id),
+                            getUserFavoritePosts(paramsId, 20, 0, user.id)
+                          ])
+                          setPosts(p)
+                          setLikedPosts(lp)
+                          setFavoritePosts(fp)
+                        }}
+                        onRetweet={async (postId: string) => {
+                          if (!user) return
+                          await togglePostRetweet(postId, user.id)
+                          // Refresh all tabs to sync interaction status
+                          const [p, lp, fp] = await Promise.all([
+                            getUserPosts(paramsId, 20, 0, user.id),
+                            getUserLikedPosts(paramsId, 20, 0, user.id),
+                            getUserFavoritePosts(paramsId, 20, 0, user.id)
+                          ])
+                          setPosts(p)
+                          setLikedPosts(lp)
+                          setFavoritePosts(fp)
+                        }}
+                        onBookmark={async (postId: string) => {
+                          if (!user) return
+                          await togglePostBookmark(postId, user.id)
+                          // Refresh all tabs to sync interaction status
+                          const [p, lp, fp] = await Promise.all([
+                            getUserPosts(paramsId, 20, 0, user.id),
+                            getUserLikedPosts(paramsId, 20, 0, user.id),
+                            getUserFavoritePosts(paramsId, 20, 0, user.id)
+                          ])
+                          setPosts(p)
+                          setLikedPosts(lp)
+                          setFavoritePosts(fp)
+                        }}
+                        onComment={() => {}}
+                      />
+                    </div>
+                  ))
+                )
               )}
             </div>
           </div>

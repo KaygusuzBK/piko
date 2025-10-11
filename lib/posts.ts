@@ -262,7 +262,7 @@ export async function getPosts(limit: number = 20, offset: number = 0, userId?: 
 }
 
 // Kullanıcının gönderilerini getirme
-export async function getUserPosts(userId: string, limit: number = 20, offset: number = 0): Promise<PostWithAuthor[]> {
+export async function getUserPosts(userId: string, limit: number = 20, offset: number = 0, viewerUserId?: string): Promise<PostWithAuthor[]> {
   try {
     const supabase = createClient()
 
@@ -274,6 +274,10 @@ export async function getUserPosts(userId: string, limit: number = 20, offset: n
           id,
           username,
           avatar_url
+        ),
+        user_interactions:post_interactions!left (
+          type,
+          user_id
         )
       `)
       .eq('author_id', userId)
@@ -286,9 +290,141 @@ export async function getUserPosts(userId: string, limit: number = 20, offset: n
       return []
     }
 
-    return posts || []
+    const processedPosts = (posts || []).map((post) => {
+      type Interaction = { type: 'like' | 'retweet' | 'bookmark'; user_id: string }
+      const interactions = (post.user_interactions as Interaction[] | undefined)?.filter((i) => 
+        i.user_id === viewerUserId
+      ) || []
+
+      const isLiked = interactions.some((i) => i.type === 'like')
+      const isRetweeted = interactions.some((i) => i.type === 'retweet')
+      const isBookmarked = interactions.some((i) => i.type === 'bookmark')
+
+      return {
+        ...post,
+        user_interaction_status: {
+          isLiked,
+          isRetweeted,
+          isBookmarked
+        }
+      }
+    })
+
+    return processedPosts
   } catch (error) {
     console.error('Error fetching user posts:', error)
+    return []
+  }
+}
+
+// Kullanıcının beğendiği gönderileri getirme
+export async function getUserLikedPosts(userId: string, limit: number = 20, offset: number = 0, viewerUserId?: string): Promise<PostWithAuthor[]> {
+  try {
+    const supabase = createClient()
+
+    const { data: posts, error } = await supabase
+      .from('posts')
+      .select(`
+        *,
+        author:users!posts_author_id_fkey (
+          id,
+          username,
+          avatar_url
+        ),
+        user_interactions:post_interactions!left (
+          type,
+          user_id
+        ),
+        post_interactions!inner (
+          user_id,
+          type
+        )
+      `)
+      .eq('post_interactions.user_id', userId)
+      .eq('post_interactions.type', 'like')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+
+    if (error) {
+      console.error('Error fetching liked posts:', error)
+      return []
+    }
+
+    return (posts || []).map((p: any) => {
+      type Interaction = { type: 'like' | 'retweet' | 'bookmark'; user_id: string }
+      const interactions: Interaction[] = (p.user_interactions as Interaction[] | undefined) || []
+      const viewerInteractions = interactions.filter((i) => i.user_id === viewerUserId)
+      const isLiked = viewerInteractions.some((i) => i.type === 'like')
+      const isRetweeted = viewerInteractions.some((i) => i.type === 'retweet')
+      const isBookmarked = true // bu liste zaten bookmark ya da like değil; burası likedPosts, bookmark durumu ayrıca hesaplanır
+      const { post_interactions, user_interactions, ...rest } = p
+      return {
+        ...(rest as PostWithAuthor),
+        user_interaction_status: {
+          isLiked,
+          isRetweeted,
+          isBookmarked: viewerInteractions.some((i) => i.type === 'bookmark')
+        }
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching liked posts:', error)
+    return []
+  }
+}
+
+// Kullanıcının favoriye (bookmark) eklediği gönderileri getirme
+export async function getUserFavoritePosts(userId: string, limit: number = 20, offset: number = 0, viewerUserId?: string): Promise<PostWithAuthor[]> {
+  try {
+    const supabase = createClient()
+
+    const { data: posts, error } = await supabase
+      .from('posts')
+      .select(`
+        *,
+        author:users!posts_author_id_fkey (
+          id,
+          username,
+          avatar_url
+        ),
+        user_interactions:post_interactions!left (
+          type,
+          user_id
+        ),
+        post_interactions!inner (
+          user_id,
+          type
+        )
+      `)
+      .eq('post_interactions.user_id', userId)
+      .eq('post_interactions.type', 'bookmark')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+
+    if (error) {
+      console.error('Error fetching favorite posts:', error)
+      return []
+    }
+
+    return (posts || []).map((p: any) => {
+      type Interaction = { type: 'like' | 'retweet' | 'bookmark'; user_id: string }
+      const interactions: Interaction[] = (p.user_interactions as Interaction[] | undefined) || []
+      const viewerInteractions = interactions.filter((i) => i.user_id === viewerUserId)
+      const isLiked = viewerInteractions.some((i) => i.type === 'like')
+      const isRetweeted = viewerInteractions.some((i) => i.type === 'retweet')
+      const isBookmarked = true // favoriler listesi, viewer için bookmark kesin
+      const { post_interactions, user_interactions, ...rest } = p
+      return {
+        ...(rest as PostWithAuthor),
+        user_interaction_status: {
+          isLiked,
+          isRetweeted,
+          isBookmarked
+        }
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching favorite posts:', error)
     return []
   }
 }

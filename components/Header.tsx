@@ -67,7 +67,7 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-gray-800 dark:border-gray-700 transition-colors bg-white dark:bg-black supports-[backdrop-filter]:bg-white/95 dark:supports-[backdrop-filter]:bg-black/95">
+    <header className="sticky top-0 z-50 w-full transition-colors bg-transparent">
       <div className="w-full flex h-16 sm:h-16 items-center justify-between px-4 sm:px-6">
         {/* Logo */}
         <div className="flex items-center space-x-3 sm:space-x-3">
@@ -93,7 +93,7 @@ export function Header() {
               placeholder="Ara..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+              className="w-full px-3 py-2 text-sm bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
             />
             
             {/* Mobile search results dropdown */}
@@ -145,7 +145,7 @@ export function Header() {
               placeholder="Kullanıcı ara..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 text-sm bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+              className="w-full px-4 py-2 text-sm bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
             />
 
             {searchQuery && (

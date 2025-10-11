@@ -69,6 +69,7 @@ CREATE INDEX IF NOT EXISTS idx_posts_author_id ON posts(author_id);
 CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_post_interactions_user_id ON post_interactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_post_interactions_post_id ON post_interactions(post_id);
+CREATE INDEX IF NOT EXISTS idx_post_interactions_user_type ON post_interactions(user_id, type);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON public.users(username) WHERE username IS NOT NULL;
 
 -- 5.1 Storage buckets for user images
