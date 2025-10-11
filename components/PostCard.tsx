@@ -66,7 +66,7 @@ export function PostCard({
     
     try {
       await onLike?.(post.id)
-    } catch (error) {
+    } catch {
       // Revert on error
       setIsLiked(prevLiked)
       setLikesCount(prevCount)
@@ -82,7 +82,7 @@ export function PostCard({
     
     try {
       await onRetweet?.(post.id)
-    } catch (error) {
+    } catch {
       // Revert on error
       setIsRetweeted(prevRetweeted)
       setRetweetsCount(prevCount)
@@ -96,7 +96,7 @@ export function PostCard({
     
     try {
       await onBookmark?.(post.id)
-    } catch (error) {
+    } catch {
       // Revert on error
       setIsBookmarked(prevBookmarked)
     }

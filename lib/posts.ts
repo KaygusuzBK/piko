@@ -350,14 +350,17 @@ export async function getUserLikedPosts(userId: string, limit: number = 20, offs
       return []
     }
 
-    return (posts || []).map((p: any) => {
+    return (posts || []).map((p) => {
       type Interaction = { type: 'like' | 'retweet' | 'bookmark'; user_id: string }
       const interactions: Interaction[] = (p.user_interactions as Interaction[] | undefined) || []
       const viewerInteractions = interactions.filter((i) => i.user_id === viewerUserId)
       const isLiked = viewerInteractions.some((i) => i.type === 'like')
       const isRetweeted = viewerInteractions.some((i) => i.type === 'retweet')
-      const isBookmarked = true // bu liste zaten bookmark ya da like değil; burası likedPosts, bookmark durumu ayrıca hesaplanır
+      // Remove unused destructuring - just keep what we need
       const { post_interactions, user_interactions, ...rest } = p
+      // Suppress eslint for necessary destructuring
+      void post_interactions
+      void user_interactions
       return {
         ...(rest as PostWithAuthor),
         user_interaction_status: {
@@ -406,14 +409,18 @@ export async function getUserFavoritePosts(userId: string, limit: number = 20, o
       return []
     }
 
-    return (posts || []).map((p: any) => {
+    return (posts || []).map((p) => {
       type Interaction = { type: 'like' | 'retweet' | 'bookmark'; user_id: string }
       const interactions: Interaction[] = (p.user_interactions as Interaction[] | undefined) || []
       const viewerInteractions = interactions.filter((i) => i.user_id === viewerUserId)
       const isLiked = viewerInteractions.some((i) => i.type === 'like')
       const isRetweeted = viewerInteractions.some((i) => i.type === 'retweet')
       const isBookmarked = true // favoriler listesi, viewer için bookmark kesin
+      // Remove unused destructuring - just keep what we need
       const { post_interactions, user_interactions, ...rest } = p
+      // Suppress eslint for necessary destructuring
+      void post_interactions
+      void user_interactions
       return {
         ...(rest as PostWithAuthor),
         user_interaction_status: {
