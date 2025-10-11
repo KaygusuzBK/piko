@@ -11,6 +11,8 @@ interface AuthContextType {
   loading: boolean
   signInWithGitHub: () => Promise<void>
   signInWithGoogle: () => Promise<void>
+  signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>
+  signUpWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
 }
 
@@ -59,6 +61,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) console.error('Google login error:', error)
   }
 
+  const signInWithEmail = async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+      if (error) {
+        console.error('Email login error:', error)
+        return { error: error as Error }
+      }
+      setSession(data.session)
+      setUser(data.user)
+      return { error: null }
+    } catch (error) {
+      console.error('Email login error:', error)
+      return { error: error as Error }
+    }
+  }
+
+  const signUpWithEmail = async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+        },
+      })
+      if (error) {
+        console.error('Email signup error:', error)
+        return { error: error as Error }
+      }
+      // If email confirmation is required, user will get an email
+      // Otherwise, they'll be logged in automatically
+      if (data.session) {
+        setSession(data.session)
+        setUser(data.user)
+      }
+      return { error: null }
+    } catch (error) {
+      console.error('Email signup error:', error)
+      return { error: error as Error }
+    }
+  }
+
   const signOut = async () => {
     const { error } = await supabase.auth.signOut()
     if (error) console.error('Sign out error:', error)
@@ -71,6 +118,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     signInWithGitHub,
     signInWithGoogle,
+    signInWithEmail,
+    signUpWithEmail,
     signOut,
   }
 

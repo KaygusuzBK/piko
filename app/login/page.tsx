@@ -8,7 +8,7 @@ import { LoginForm } from '@/components/login-form'
 import Image from 'next/image'
 
 export default function LoginPage() {
-  const { signInWithGitHub, signInWithGoogle } = useAuth()
+  const { signInWithGitHub, signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth()
   const { user, loading } = useAuthStore()
   const router = useRouter()
 
@@ -99,6 +99,8 @@ export default function LoginPage() {
           <LoginForm 
             onGitHubLogin={signInWithGitHub}
             onGoogleLogin={signInWithGoogle}
+            onEmailLogin={signInWithEmail}
+            onEmailSignup={signUpWithEmail}
           />
         </div>
       </div>

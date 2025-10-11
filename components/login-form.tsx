@@ -15,19 +15,57 @@ import {
   FieldSeparator,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Github, Chrome, Sparkles } from "lucide-react"
+import { Github, Chrome, Sparkles, Loader2 } from "lucide-react"
+import { useState } from "react"
 
 interface LoginFormProps extends React.ComponentProps<"div"> {
   onGitHubLogin?: () => void
   onGoogleLogin?: () => void
+  onEmailLogin?: (email: string, password: string) => Promise<{ error: Error | null }>
+  onEmailSignup?: (email: string, password: string) => Promise<{ error: Error | null }>
 }
 
 export function LoginForm({
   className,
   onGitHubLogin,
   onGoogleLogin,
+  onEmailLogin,
+  onEmailSignup,
   ...props
 }: LoginFormProps) {
+  const [isSignUp, setIsSignUp] = useState(false)
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setSuccess("")
+    setLoading(true)
+
+    try {
+      if (isSignUp) {
+        const result = await onEmailSignup?.(email, password)
+        if (result?.error) {
+          setError(result.error.message || "Kayıt başarısız oldu")
+        } else {
+          setSuccess("Kayıt başarılı! Giriş yapılıyor...")
+        }
+      } else {
+        const result = await onEmailLogin?.(email, password)
+        if (result?.error) {
+          setError(result.error.message || "Giriş başarısız oldu")
+        }
+      }
+    } catch {
+      setError("Bir hata oluştu. Lütfen tekrar deneyin.")
+    } finally {
+      setLoading(false)
+    }
+  }
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card className="border-border/50 bg-card/80 backdrop-blur-xl shadow-2xl relative overflow-hidden">
@@ -39,14 +77,24 @@ export function LoginForm({
             <Sparkles className="h-6 w-6 text-[#BF092F] animate-pulse" />
           </div>
           <CardTitle className="text-3xl font-bold bg-gradient-to-r from-[#BF092F] to-purple-600 bg-clip-text text-transparent">
-            Hoş Geldiniz
+            {isSignUp ? "Hesap Oluştur" : "Hoş Geldiniz"}
           </CardTitle>
           <CardDescription className="text-muted-foreground text-base">
-            Piko&apos;ya katılın ve düşüncelerinizi paylaşın
+            {isSignUp ? "Piko'ya katılın ve düşüncelerinizi paylaşın" : "Hesabınıza giriş yapın"}
           </CardDescription>
         </CardHeader>
         <CardContent className="pb-8">
-          <form>
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-500 text-sm">
+              {error}
+            </div>
+          )}
+          {success && (
+            <div className="mb-4 p-3 bg-green-500/10 border border-green-500/50 rounded-lg text-green-500 text-sm">
+              {success}
+            </div>
+          )}
+          <form onSubmit={handleSubmit}>
             <FieldGroup>
               <Field>
                 <Button 
@@ -78,35 +126,68 @@ export function LoginForm({
                   type="email"
                   placeholder="ornek@email.com"
                   required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
                   className="border-border focus:border-[#BF092F] focus:ring-2 focus:ring-[#BF092F]/20 transition-all duration-300"
                 />
               </Field>
               <Field>
                 <div className="flex items-center">
                   <FieldLabel htmlFor="password" className="text-foreground font-medium">Şifre</FieldLabel>
-                  <a
-                    href="#"
-                    className="ml-auto text-sm underline-offset-4 hover:underline text-muted-foreground hover:text-[#BF092F] transition-colors duration-200"
-                  >
-                    Şifrenizi mi unuttunuz?
-                  </a>
+                  {!isSignUp && (
+                    <a
+                      href="#"
+                      className="ml-auto text-sm underline-offset-4 hover:underline text-muted-foreground hover:text-[#BF092F] transition-colors duration-200"
+                    >
+                      Şifrenizi mi unuttunuz?
+                    </a>
+                  )}
                 </div>
                 <Input 
                   id="password" 
                   type="password" 
                   required 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  minLength={6}
                   className="border-border focus:border-[#BF092F] focus:ring-2 focus:ring-[#BF092F]/20 transition-all duration-300"
                 />
+                {isSignUp && (
+                  <FieldDescription className="text-xs text-muted-foreground">
+                    En az 6 karakter olmalıdır
+                  </FieldDescription>
+                )}
               </Field>
               <Field>
                 <Button 
                   type="submit" 
-                  className="w-full bg-gradient-to-r from-[#BF092F] to-purple-600 hover:from-[#BF092F]/90 hover:to-purple-600/90 text-white font-semibold py-6 transform hover:scale-105 transition-all duration-300 hover:shadow-xl"
+                  disabled={loading}
+                  className="w-full bg-gradient-to-r from-[#BF092F] to-purple-600 hover:from-[#BF092F]/90 hover:to-purple-600/90 text-white font-semibold py-6 transform hover:scale-105 transition-all duration-300 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
-                  Giriş Yap
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {isSignUp ? "Kayıt Olunuyor..." : "Giriş Yapılıyor..."}
+                    </>
+                  ) : (
+                    isSignUp ? "Kayıt Ol" : "Giriş Yap"
+                  )}
                 </Button>
                 <FieldDescription className="text-center text-muted-foreground">
-                  Hesabınız yok mu? <a href="#" className="text-[#BF092F] hover:underline font-medium">Kayıt olun</a>
+                  {isSignUp ? "Zaten hesabınız var mı? " : "Hesabınız yok mu? "}
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setIsSignUp(!isSignUp)
+                      setError("")
+                      setSuccess("")
+                    }}
+                    className="text-[#BF092F] hover:underline font-medium"
+                  >
+                    {isSignUp ? "Giriş yapın" : "Kayıt olun"}
+                  </button>
                 </FieldDescription>
               </Field>
             </FieldGroup>
