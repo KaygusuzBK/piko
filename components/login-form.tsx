@@ -52,12 +52,14 @@ export function LoginForm({
         if (result?.error) {
           setError(result.error.message || "Kayıt başarısız oldu")
         } else {
-          setSuccess("Kayıt başarılı! Giriş yapılıyor...")
+          setSuccess("Kayıt başarılı! Lütfen e-posta adresinizi kontrol edin ve hesabınızı doğrulayın.")
         }
       } else {
         const result = await onEmailLogin?.(email, password)
         if (result?.error) {
           setError(result.error.message || "Giriş başarısız oldu")
+        } else {
+          setSuccess("Giriş başarılı! Yönlendiriliyorsunuz...")
         }
       }
     } catch {
