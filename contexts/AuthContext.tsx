@@ -12,7 +12,7 @@ interface AuthContextType {
   signInWithGitHub: () => Promise<void>
   signInWithGoogle: () => Promise<void>
   signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>
-  signUpWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>
+  signUpWithEmail: (email: string, password: string, displayName: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
 }
 
@@ -80,13 +80,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const signUpWithEmail = async (email: string, password: string) => {
+  const signUpWithEmail = async (email: string, password: string, displayName: string) => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            name: displayName,
+            display_name: displayName,
+          },
         },
       })
       if (error) {

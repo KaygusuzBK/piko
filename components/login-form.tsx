@@ -22,7 +22,7 @@ interface LoginFormProps extends React.ComponentProps<"div"> {
   onGitHubLogin?: () => void
   onGoogleLogin?: () => void
   onEmailLogin?: (email: string, password: string) => Promise<{ error: Error | null }>
-  onEmailSignup?: (email: string, password: string) => Promise<{ error: Error | null }>
+  onEmailSignup?: (email: string, password: string, displayName: string) => Promise<{ error: Error | null }>
 }
 
 export function LoginForm({
@@ -36,6 +36,7 @@ export function LoginForm({
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [displayName, setDisplayName] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
@@ -44,11 +45,18 @@ export function LoginForm({
     e.preventDefault()
     setError("")
     setSuccess("")
+    
+    // Validate display name for signup
+    if (isSignUp && !displayName.trim()) {
+      setError("Lütfen adınızı girin")
+      return
+    }
+    
     setLoading(true)
 
     try {
       if (isSignUp) {
-        const result = await onEmailSignup?.(email, password)
+        const result = await onEmailSignup?.(email, password, displayName)
         if (result?.error) {
           setError(result.error.message || "Kayıt başarısız oldu")
         } else {
@@ -121,6 +129,21 @@ export function LoginForm({
               <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
                 veya devam edin
               </FieldSeparator>
+              {isSignUp && (
+                <Field>
+                  <FieldLabel htmlFor="displayName" className="text-foreground font-medium">Adınız</FieldLabel>
+                  <Input
+                    id="displayName"
+                    type="text"
+                    placeholder="Adınız Soyadınız"
+                    required
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    disabled={loading}
+                    className="border-border focus:border-[#BF092F] focus:ring-2 focus:ring-[#BF092F]/20 transition-all duration-300"
+                  />
+                </Field>
+              )}
               <Field>
                 <FieldLabel htmlFor="email" className="text-foreground font-medium">Email</FieldLabel>
                 <Input
@@ -185,6 +208,7 @@ export function LoginForm({
                       setIsSignUp(!isSignUp)
                       setError("")
                       setSuccess("")
+                      setDisplayName("")
                     }}
                     className="text-[#BF092F] hover:underline font-medium"
                   >
