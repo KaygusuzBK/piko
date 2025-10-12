@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS posts (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   content TEXT NOT NULL CHECK (char_length(content) <= 280),
   image_url TEXT,
+  type TEXT DEFAULT 'text' CHECK (type IN ('text', 'media')),
   author_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -59,8 +60,9 @@ CREATE TABLE IF NOT EXISTS posts (
   retweets_count INTEGER DEFAULT 0 CHECK (retweets_count >= 0)
 );
 
--- Add image_url column if it doesn't exist (for existing tables)
+-- Add image_url and type columns if they don't exist (for existing tables)
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS image_url TEXT;
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'text' CHECK (type IN ('text', 'media'));
 
 -- 4. Post interactions tablosu (beğeni, retweet, bookmark)
 CREATE TABLE IF NOT EXISTS post_interactions (
@@ -75,6 +77,8 @@ CREATE TABLE IF NOT EXISTS post_interactions (
 -- 5. Indexler
 CREATE INDEX IF NOT EXISTS idx_posts_author_id ON posts(author_id);
 CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_type ON posts(type);
+CREATE INDEX IF NOT EXISTS idx_posts_author_type ON posts(author_id, type);
 CREATE INDEX IF NOT EXISTS idx_post_interactions_user_id ON post_interactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_post_interactions_post_id ON post_interactions(post_id);
 CREATE INDEX IF NOT EXISTS idx_post_interactions_user_type ON post_interactions(user_id, type);

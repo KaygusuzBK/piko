@@ -44,6 +44,7 @@ export function useUserPosts(userId: string, viewerUserId?: string, limit: numbe
   const [posts, setPosts] = useState<PostWithAuthor[]>([])
   const [likedPosts, setLikedPosts] = useState<PostWithAuthor[]>([])
   const [favoritePosts, setFavoritePosts] = useState<PostWithAuthor[]>([])
+  const [mediaPosts, setMediaPosts] = useState<PostWithAuthor[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -53,14 +54,16 @@ export function useUserPosts(userId: string, viewerUserId?: string, limit: numbe
     setLoading(true)
     setError(null)
     try {
-      const [p, lp, fp] = await Promise.all([
+      const [p, lp, fp, mp] = await Promise.all([
         postQueryService.getUserPosts(userId, limit, 0, viewerUserId),
         postQueryService.getUserLikedPosts(userId, limit, 0, viewerUserId),
-        postQueryService.getUserFavoritePosts(userId, limit, 0, viewerUserId)
+        postQueryService.getUserFavoritePosts(userId, limit, 0, viewerUserId),
+        postQueryService.getUserMediaPosts(userId, limit, 0, viewerUserId)
       ])
       setPosts(p)
       setLikedPosts(lp)
       setFavoritePosts(fp)
+      setMediaPosts(mp)
     } catch (err) {
       setError('Failed to load user posts')
       console.error(err)
@@ -81,9 +84,11 @@ export function useUserPosts(userId: string, viewerUserId?: string, limit: numbe
     posts,
     likedPosts,
     favoritePosts,
+    mediaPosts,
     setPosts,
     setLikedPosts,
     setFavoritePosts,
+    setMediaPosts,
     loading,
     error,
     refresh

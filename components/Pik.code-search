@@ -1,0 +1,69 @@
+# Query: Pik
+# Flags: RegExp
+# ContextLines: 1
+
+14 results - 9 files
+
+package-lock.json:
+    1  {
+    2:   "name": "SOC-AI",
+    3    "version": "0.1.0",
+
+    7      "": {
+    8:       "name": "SOC-AI",
+    9        "version": "0.1.0",
+
+  384        "resolved": "https://registry.npmjs.org/@img/sharp-libvips-darwin-arm64/-/sharp-libvips-darwin-arm64-1.2.3.tgz",
+  385:       "integrity": "sha512-QzWAKo7kpHxbuHqUC28DZ9pIKpSi2ts2OJnoIGI26+HMgq92ZZ4vk8iJd4XsxN+tYfNJxzH6W62X5eTcsBymHw==",
+  386        "cpu": [
+
+app/layout.tsx:
+  19  export const metadata: Metadata = {
+  20:   title: "SOC-AI - Sosyal Medya",
+  21    description: "Modern sosyal medya uygulaması",
+
+app/login/page.tsx:
+  47                src="/soc-ai_logo.png"
+  48:               alt="SOC-AI Logo"
+  49                width={150}
+
+  55              <h1 className="text-6xl font-bold bg-gradient-to-r from-[#BF092F] to-purple-600 bg-clip-text text-transparent">
+  56:               SOC-AI
+  57              </h1>
+
+  87                  src="/soc-ai_logo.png"
+  88:                 alt="SOC-AI Logo"
+  89                  width={80}
+
+  94              <h1 className="text-4xl font-bold bg-gradient-to-r from-[#BF092F] to-purple-600 bg-clip-text text-transparent">
+  95:               SOC-AI
+  96              </h1>
+
+components/Header.tsx:
+  36            </div>
+  37:           <h1 className="text-xl sm:text-xl font-bold text-gray-900 dark:text-white">SOC-AI</h1>
+  38          </div>
+
+components/login-form.tsx:
+  92            <CardDescription className="text-muted-foreground text-base">
+  93:             {isSignUp ? "SOC-AI'ya katılın ve düşüncelerinizi paylaşın" : "Hesabınıza giriş yapın"}
+  94            </CardDescription>
+
+components/MainFeed.tsx:
+  77                >
+  78:                 İlk SOC-AInu Yaz
+  79                </Button>
+
+components/profile/ProfileTabs.tsx:
+  7    const tabs = [
+  8:     { id: 'posts' as const, label: 'SOC-AIlar' },
+  9      { id: 'replies' as const, label: 'Yanıtlar' },
+
+supabase/README.md:
+  2  
+  3: Bu rehber, SOC-AI sosyal medya uygulaması için Supabase'i yapılandırmak için gerekli adımları içerir.
+  4  
+
+supabase/schema.sql:
+  1: -- SOC-AI Sosyal Medya Uygulaması - Birleştirilmiş Şema
+  2  -- Users ve profiles tabloları birleştirildi

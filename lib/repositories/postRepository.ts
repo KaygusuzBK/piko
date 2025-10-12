@@ -74,6 +74,10 @@ export class PostRepository {
         query = query.eq('author_id', filters.authorId)
       }
 
+      if (filters.type) {
+        query = query.eq('type', filters.type)
+      }
+
       // For liked/bookmarked posts, we need inner join
       if (filters.likedByUserId) {
         query = query

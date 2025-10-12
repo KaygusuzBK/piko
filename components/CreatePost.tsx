@@ -76,6 +76,7 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
       const postData: CreatePostData = {
         content: content.trim(),
         image_url: imageUrl,
+        type: imageUrl ? 'media' : 'text',
         author_id: user.id
       }
       
