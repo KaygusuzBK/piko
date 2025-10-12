@@ -90,7 +90,7 @@ export function LoginForm({
             {isSignUp ? "Hesap Oluştur" : "Hoş Geldiniz"}
           </CardTitle>
           <CardDescription className="text-muted-foreground text-base">
-            {isSignUp ? "Piko'ya katılın ve düşüncelerinizi paylaşın" : "Hesabınıza giriş yapın"}
+            {isSignUp ? "SOC AI'ya katılın ve düşüncelerinizi paylaşın" : "Hesabınıza giriş yapın"}
           </CardDescription>
         </CardHeader>
         <CardContent className="pb-8">

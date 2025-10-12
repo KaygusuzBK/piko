@@ -45,7 +45,7 @@ export default function LoginPage() {
             <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#BF092F] to-purple-600 opacity-60 blur-2xl animate-pulse"></div>
             <Image
               src="/soc-ai_logo.png"
-              alt="Piko Logo"
+              alt="SOC AI"
               width={150}
               height={150}
               className="relative rounded-3xl z-10 drop-shadow-2xl"
@@ -53,7 +53,7 @@ export default function LoginPage() {
           </div>
           <div className="text-center space-y-4">
             <h1 className="text-6xl font-bold bg-gradient-to-r from-[#BF092F] to-purple-600 bg-clip-text text-transparent">
-              Piko
+            SOC AI
             </h1>
             <p className="text-2xl text-muted-foreground max-w-md">
               Düşüncelerinizi paylaşın, dünyayla bağlantı kurun
@@ -85,14 +85,14 @@ export default function LoginPage() {
               <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#BF092F] to-purple-600 opacity-60 blur-xl"></div>
               <Image
                 src="/soc-ai_logo.png"
-                alt="Piko Logo"
+                alt="SOC AI"
                 width={80}
                 height={80}
                 className="relative rounded-2xl z-10"
               />
             </div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-[#BF092F] to-purple-600 bg-clip-text text-transparent">
-              Piko
+              SOC AI
             </h1>
           </div>
           

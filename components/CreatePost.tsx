@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -8,7 +8,10 @@ import { Separator } from '@/components/ui/separator'
 import { useAuthStore } from '@/stores/authStore'
 import { createPost, CreatePostData } from '@/lib/posts'
 import { uploadMultiplePostImages, validateImageFile } from '@/lib/utils/imageUpload'
-import { Send, Image as ImageIcon, Zap, X } from 'lucide-react'
+import { EmojiPicker } from '@/components/EmojiPicker'
+import { AISuggestions } from '@/components/AISuggestions'
+import { MediaPicker } from '@/components/MediaPicker'
+import { Send, X } from 'lucide-react'
 import Image from 'next/image'
 
 interface CreatePostProps {
@@ -26,47 +29,6 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
   const [selectedImages, setSelectedImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [uploadError, setUploadError] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
-    if (files.length === 0) return
-
-    // Check total count
-    const totalImages = selectedImages.length + files.length
-    if (totalImages > MAX_IMAGES) {
-      setUploadError(`En fazla ${MAX_IMAGES} resim ekleyebilirsiniz`)
-      return
-    }
-
-    // Validate each file
-    const validFiles: File[] = []
-    const newPreviews: string[] = []
-
-    for (const file of files) {
-      const error = validateImageFile(file)
-      if (error) {
-        setUploadError(error)
-        return
-      }
-      validFiles.push(file)
-    }
-
-    // Create previews
-    validFiles.forEach(file => {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        newPreviews.push(reader.result as string)
-        if (newPreviews.length === validFiles.length) {
-          setImagePreviews(prev => [...prev, ...newPreviews])
-        }
-      }
-      reader.readAsDataURL(file)
-    })
-
-    setUploadError(null)
-    setSelectedImages(prev => [...prev, ...validFiles])
-  }
 
   const handleRemoveImage = (index: number) => {
     setSelectedImages(prev => prev.filter((_, i) => i !== index))
@@ -78,8 +40,64 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
     setSelectedImages([])
     setImagePreviews([])
     setUploadError(null)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
+  }
+
+  const handleEmojiSelect = (emoji: string) => {
+    setContent(prev => prev + emoji)
+  }
+
+  const handleAISuggestion = (suggestion: string) => {
+    setContent(suggestion)
+  }
+
+  const handleMediaSelect = (files: File[], type: 'image' | 'video' | 'gif') => {
+    if (type === 'image') {
+      // Check total count
+      const totalImages = selectedImages.length + files.length
+      if (totalImages > MAX_IMAGES) {
+        setUploadError(`En fazla ${MAX_IMAGES} medya ekleyebilirsiniz`)
+        return
+      }
+
+      // Validate each file
+      const validFiles: File[] = []
+      const newPreviews: string[] = []
+
+      for (const file of files) {
+        const error = validateImageFile(file)
+        if (error) {
+          setUploadError(error)
+          return
+        }
+        validFiles.push(file)
+      }
+
+      // Create previews
+      validFiles.forEach(file => {
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          newPreviews.push(reader.result as string)
+          if (newPreviews.length === validFiles.length) {
+            setImagePreviews(prev => [...prev, ...newPreviews])
+          }
+        }
+        reader.readAsDataURL(file)
+      })
+
+      setUploadError(null)
+      setSelectedImages(prev => [...prev, ...validFiles])
+    } else if (type === 'video' || type === 'gif') {
+      // For now, treat videos and GIFs as images
+      // In production, you'd handle these separately
+      const file = files[0]
+      if (file) {
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          setImagePreviews(prev => [...prev, reader.result as string])
+        }
+        reader.readAsDataURL(file)
+        setSelectedImages(prev => [...prev, file])
+      }
     }
   }
 
@@ -179,26 +197,15 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
                   // Focus olduğunda: alt satırda butonlar - justify-between ile iki uzak köşe
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center space-x-2">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleImageSelect}
-                        className="hidden"
-                      />
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => fileInputRef.current?.click()}
+                      <MediaPicker 
+                        onMediaSelect={handleMediaSelect}
                         disabled={selectedImages.length >= MAX_IMAGES}
-                        className="group h-6 w-6 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white active:text-pink-500 dark:active:text-pink-400 disabled:opacity-50"
-                      >
-                        <ImageIcon className="h-3 w-3 group-active:text-pink-500 dark:group-active:text-pink-400" aria-hidden="true" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white">
-                        <Zap className="h-3 w-3" />
-                      </Button>
+                      />
+                      <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+                      <AISuggestions 
+                        onSuggestionSelect={handleAISuggestion}
+                        currentContent={content}
+                      />
                       {selectedImages.length > 0 && (
                         <span className="text-xs text-muted-foreground">
                           {selectedImages.length}/{MAX_IMAGES}
@@ -222,26 +229,15 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
                 ) : (
                   // Focus olmadığında: tüm iconlar sağ köşede
                   <div className="flex items-center justify-end w-full space-x-1">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleImageSelect}
-                      className="hidden"
-                    />
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => fileInputRef.current?.click()}
+                    <MediaPicker 
+                      onMediaSelect={handleMediaSelect}
                       disabled={selectedImages.length >= MAX_IMAGES}
-                      className="group h-6 w-6 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white active:text-pink-500 dark:active:text-pink-400 disabled:opacity-50"
-                    >
-                      <ImageIcon className="h-4 w-4 group-active:text-pink-500 dark:group-active:text-pink-400" aria-hidden="true" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white">
-                      <Zap className="h-4 w-4" />
-                    </Button>
+                    />
+                    <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+                    <AISuggestions 
+                      onSuggestionSelect={handleAISuggestion}
+                      currentContent={content}
+                    />
                     <span className={`text-xs ${content.length > 250 ? 'text-red-400' : 'text-muted-foreground dark:text-white/60'}`}>
                       {content.length}/280
                     </span>
@@ -315,28 +311,15 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-1 sm:space-x-2">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleImageSelect}
-                      className="hidden"
-                    />
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => fileInputRef.current?.click()}
+                    <MediaPicker 
+                      onMediaSelect={handleMediaSelect}
                       disabled={selectedImages.length >= MAX_IMAGES}
-                      className="group h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white active:text-pink-500 dark:active:text-pink-400 transition-all duration-200 hover:scale-110 disabled:opacity-50"
-                    >
-                      <ImageIcon className="h-3 w-3 transition-transform duration-200 hover:rotate-12 group-active:text-pink-500 dark:group-active:text-pink-400" aria-hidden="true" />
-                      <span className="sr-only">Resim ekle ({selectedImages.length}/{MAX_IMAGES})</span>
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white transition-all duration-200 hover:scale-110">
-                      <Zap className="h-3 w-3 transition-transform duration-200 hover:scale-125" />
-                      <span className="sr-only">Özel efekt ekle</span>
-                    </Button>
+                    />
+                    <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+                    <AISuggestions 
+                      onSuggestionSelect={handleAISuggestion}
+                      currentContent={content}
+                    />
                   </div>
                   
                   <div className="flex items-center space-x-2 sm:space-x-3">

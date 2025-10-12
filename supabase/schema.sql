@@ -1,4 +1,4 @@
--- Piko Sosyal Medya Uygulaması - Birleştirilmiş Şema
+-- SOC AI Sosyal Medya Uygulaması - Birleştirilmiş Şema
 -- Users ve profiles tabloları birleştirildi
 
 -- 1. Users tablosunu genişletme (mevcut users tablosuna ek kolonlar)

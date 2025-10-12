@@ -1,6 +1,6 @@
 # Supabase Kurulum Rehberi
 
-Bu rehber, Piko sosyal medya uygulaması için Supabase'i yapılandırmak için gerekli adımları içerir.
+Bu rehber, SOC AI sosyal medya uygulaması için Supabase'i yapılandırmak için gerekli adımları içerir.
 
 ## 📋 Gereksinimler
 

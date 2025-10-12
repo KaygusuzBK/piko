@@ -34,7 +34,7 @@ export function Header() {
               className="relative rounded-lg sm:w-8 sm:h-8 z-10"
             />
           </div>
-          <h1 className="text-xl sm:text-xl font-bold text-gray-900 dark:text-white">Piko</h1>
+          <h1 className="text-xl sm:text-xl font-bold text-gray-900 dark:text-white">SOC AI</h1>
         </div>
 
         {/* Search Bar */}

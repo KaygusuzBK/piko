@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Piko - Sosyal Medya",
+  title: "SOC AI - Sosyal Medya",
   description: "Modern sosyal medya uygulaması",
 };
 

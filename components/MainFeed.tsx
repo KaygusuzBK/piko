@@ -75,7 +75,7 @@ export function MainFeed({
                   mainFeedRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
                 }}
               >
-                İlk Pikonu Yaz
+                İlk SOC AI Yaz
               </Button>
             </div>
           </CardContent>
