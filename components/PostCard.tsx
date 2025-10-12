@@ -33,14 +33,21 @@ export function PostCard({
   const [likesCount, setLikesCount] = useState(post.likes_count)
   const [retweetsCount, setRetweetsCount] = useState(post.retweets_count)
 
-  // Sync with post changes
+  // Sync with post changes - use individual values as dependencies
   useEffect(() => {
-    if (post.user_interaction_status) {
-      setIsLiked(post.user_interaction_status.isLiked)
-      setIsRetweeted(post.user_interaction_status.isRetweeted)
-      setIsBookmarked(post.user_interaction_status.isBookmarked)
-    }
-  }, [post.user_interaction_status])
+    setIsLiked(post.user_interaction_status?.isLiked || false)
+    setIsRetweeted(post.user_interaction_status?.isRetweeted || false)
+    setIsBookmarked(post.user_interaction_status?.isBookmarked || false)
+    setLikesCount(post.likes_count)
+    setRetweetsCount(post.retweets_count)
+  }, [
+    post.user_interaction_status?.isLiked,
+    post.user_interaction_status?.isRetweeted,
+    post.user_interaction_status?.isBookmarked,
+    post.likes_count,
+    post.retweets_count,
+    post.id // Post ID değişirse tüm state'i reset et
+  ])
 
   const handleLike = async () => {
     const prevLiked = isLiked
