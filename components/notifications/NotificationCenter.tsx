@@ -39,19 +39,19 @@ const getNotificationIcon = (type: Notification['type']) => {
 }
 
 const getNotificationMessage = (notification: Notification) => {
-  const { userName, type } = notification
+  const { actorName, type } = notification
   
   switch (type) {
     case 'like':
-      return `${userName} gönderinizi beğendi`
+      return `${actorName} gönderinizi beğendi`
     case 'comment':
-      return `${userName} gönderinize yorum yaptı`
+      return `${actorName} gönderinize yorum yaptı`
     case 'follow':
-      return `${userName} sizi takip etmeye başladı`
+      return `${actorName} sizi takip etmeye başladı`
     case 'mention':
-      return `${userName} sizden bahsetti`
+      return `${actorName} sizden bahsetti`
     case 'reply':
-      return `${userName} yorumunuza cevap verdi`
+      return `${actorName} yorumunuza cevap verdi`
     default:
       return notification.message
   }
@@ -116,9 +116,9 @@ export function NotificationCenter({
                 <div className="flex items-start gap-3 w-full">
                   <div className="flex-shrink-0">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={notification.userAvatar} />
+                      <AvatarImage src={notification.actorAvatar} />
                       <AvatarFallback>
-                        {notification.userName.charAt(0).toUpperCase()}
+                        {notification.actorName.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                   </div>

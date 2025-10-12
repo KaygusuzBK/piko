@@ -68,17 +68,18 @@ export function PostCard({
     try {
       await onLike?.(post.id)
       
-      // Add notification if user liked someone else's post
-      if (!prevLiked && user && user.id !== post.author.id) {
-        addNotification({
-          type: 'like',
-          message: 'Gönderiniz beğenildi',
-          userId: post.author.id,
-          userName: 'Bir kullanıcı',
-          userAvatar: undefined,
-          postId: post.id,
-        })
-      }
+        // Add notification if user liked someone else's post
+        if (!prevLiked && user && user.id !== post.author.id) {
+          addNotification({
+            type: 'like',
+            message: 'Gönderiniz beğenildi',
+            recipientId: post.author.id,  // Bildirimi alan kişi (gönderi sahibi)
+            actorId: user.id,             // Bildirimi gönderen kişi (beğenen kişi)
+            actorName: user.email?.split('@')[0] || 'Kullanıcı',
+            actorAvatar: undefined,
+            postId: post.id,
+          })
+        }
     } catch {
       // Revert on error
       setIsLiked(prevLiked)

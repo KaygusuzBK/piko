@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from 'react'
 import { useNotificationStore, type Notification } from '@/stores/notificationStore'
+import { useAuthStore } from '@/stores/authStore'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { X, Heart, MessageCircle, UserPlus, AtSign, Reply } from 'lucide-react'
@@ -31,19 +32,19 @@ const getNotificationIcon = (type: Notification['type']) => {
 }
 
 const getNotificationMessage = (notification: Notification) => {
-  const { userName, type } = notification
+  const { actorName, type } = notification
   
   switch (type) {
     case 'like':
-      return `${userName} gönderinizi beğendi`
+      return `${actorName} gönderinizi beğendi`
     case 'comment':
-      return `${userName} gönderinize yorum yaptı`
+      return `${actorName} gönderinize yorum yaptı`
     case 'follow':
-      return `${userName} sizi takip etmeye başladı`
+      return `${actorName} sizi takip etmeye başladı`
     case 'mention':
-      return `${userName} sizden bahsetti`
+      return `${actorName} sizden bahsetti`
     case 'reply':
-      return `${userName} yorumunuza cevap verdi`
+      return `${actorName} yorumunuza cevap verdi`
     default:
       return notification.message
   }
@@ -80,12 +81,12 @@ function NotificationToast({ notification, onClose }: NotificationToastProps) {
     >
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={notification.userAvatar} />
-            <AvatarFallback>
-              {notification.userName.charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+        <Avatar className="h-8 w-8">
+          <AvatarImage src={notification.actorAvatar} />
+          <AvatarFallback>
+            {notification.actorName.charAt(0).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
         </div>
 
         <div className="flex-1 min-w-0">
@@ -119,10 +120,18 @@ function NotificationToast({ notification, onClose }: NotificationToastProps) {
 
 export function NotificationToasts() {
   const { notifications, removeNotification } = useNotificationStore()
+  const { user } = useAuthStore()
+
+  // Filter notifications for current user
+  const userNotifications = notifications.filter(
+    notification => notification.recipientId === user?.id
+  )
+
+  if (!user) return null
 
   return (
     <div className="fixed top-4 right-4 z-50 space-y-2">
-      {notifications.map((notification) => (
+      {userNotifications.map((notification) => (
         <NotificationToast
           key={notification.id}
           notification={notification}

@@ -13,9 +13,10 @@ export interface Notification {
   id: string
   type: NotificationType
   message: string
-  userId: string
-  userName: string
-  userAvatar?: string
+  recipientId: string  // Bildirimi alan kişi
+  actorId: string      // Bildirimi gönderen kişi
+  actorName: string    // Bildirimi gönderen kişinin adı
+  actorAvatar?: string // Bildirimi gönderen kişinin avatar'ı
   postId?: string
   commentId?: string
   timestamp: number
