@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { PostWithAuthor } from '@/lib/types'
@@ -17,6 +18,7 @@ interface PostCardProps {
   onComment?: (postId: string) => void
   canDelete?: boolean
   onDelete?: (postId: string) => void
+  disableNavigation?: boolean
 }
 
 export function PostCard({
@@ -26,8 +28,10 @@ export function PostCard({
   onBookmark,
   onComment,
   canDelete = false,
-  onDelete
+  onDelete,
+  disableNavigation = false
 }: PostCardProps) {
+  const router = useRouter()
   const [isLiked, setIsLiked] = useState(post.user_interaction_status?.isLiked || false)
   const [isRetweeted, setIsRetweeted] = useState(post.user_interaction_status?.isRetweeted || false)
   const [isBookmarked, setIsBookmarked] = useState(post.user_interaction_status?.isBookmarked || false)
@@ -103,8 +107,25 @@ export function PostCard({
     onDelete?.(post.id)
   }
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't navigate if clicking on interactive elements
+    const target = e.target as HTMLElement
+    if (
+      disableNavigation ||
+      target.closest('button') ||
+      target.closest('a') ||
+      target.closest('[role="button"]')
+    ) {
+      return
+    }
+    router.push(`/posts/${post.id}`)
+  }
+
   return (
-    <Card className="w-full border border-border bg-transparent dark:bg-[#171717]">
+    <Card 
+      className="w-full border border-border bg-transparent dark:bg-[#171717] cursor-pointer hover:bg-accent/5 transition-colors"
+      onClick={handleCardClick}
+    >
       <CardContent className="p-2 sm:p-3">
         <div className="flex space-x-2 sm:space-x-3 transition-transform duration-500 relative">
           {/* Soft gradient in top-left corner */}

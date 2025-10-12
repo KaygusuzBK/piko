@@ -68,6 +68,33 @@ export class PostQueryService {
   async getUserMediaPosts(userId: string, limit: number = 20, offset: number = 0, viewerUserId?: string): Promise<PostWithAuthor[]> {
     return this.fetchPostsWithInteractions({ authorId: userId, type: 'media', limit, offset }, viewerUserId)
   }
+
+  async getPostById(postId: string, viewerUserId?: string): Promise<PostWithAuthor | null> {
+    try {
+      const posts = await postRepository.fetchPostById(postId)
+      if (!posts || posts.length === 0) {
+        return null
+      }
+
+      const post = posts[0]
+      const interactionStatus = this.processInteractionStatus(
+        post.user_interactions,
+        viewerUserId
+      )
+
+      // Clean up the response
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { user_interactions, post_interactions, ...cleanPost } = post
+
+      return {
+        ...cleanPost,
+        user_interaction_status: interactionStatus
+      } as PostWithAuthor
+    } catch (error) {
+      console.error('Error fetching post by id:', error)
+      return null
+    }
+  }
 }
 
 // Singleton instance
