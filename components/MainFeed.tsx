@@ -13,9 +13,9 @@ type MainFeedProps = {
   onPostCreated: () => void
   isCreatePostCompact: boolean
   setIsCreatePostCompact: (v: boolean) => void
-  onLike: (postId: string) => void
-  onRetweet: (postId: string) => void
-  onBookmark: (postId: string) => void
+  onLike: (postId: string) => Promise<void>
+  onRetweet: (postId: string) => Promise<void>
+  onBookmark: (postId: string) => Promise<void>
   onComment: (postId: string) => void
   currentUserId?: string
   onDelete?: (postId: string) => void

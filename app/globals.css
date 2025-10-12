@@ -188,6 +188,7 @@
     100% { transform: translateY(0); opacity: 1 }
   }
   .animate-drop-in { animation: drop-in 420ms ease-out both }
+  .delay-1000 { animation-delay: 1s }
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
