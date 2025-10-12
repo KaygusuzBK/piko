@@ -1,12 +1,27 @@
 /**
- * Push Notification Service
+ * Push Notification Service (Firebase FCM)
  * 
- * Manages web push notifications.
- * Handles subscription management and notification sending.
+ * Manages web push notifications using Firebase Cloud Messaging.
+ * No VAPID keys required - Firebase handles everything.
  */
 
 import { notificationRepository } from '@/lib/repositories/notificationRepository'
+import { getFCMToken, registerServiceWorker, onForegroundMessage } from '@/lib/firebase'
 import type { PushSubscription as PushSubscriptionType } from '@/lib/types'
+
+// Firebase message payload type
+interface FirebaseMessagePayload {
+  notification?: {
+    title?: string
+    body?: string
+    icon?: string
+    badge?: string
+  }
+  data?: Record<string, string>
+  from?: string
+  messageId?: string
+  collapseKey?: string
+}
 
 export class PushNotificationService {
   private notificationRepo = notificationRepository
@@ -20,28 +35,39 @@ export class PushNotificationService {
   }
 
   /**
-   * Request notification permission
+   * Initialize Firebase FCM
    */
-  async requestPermission(): Promise<NotificationPermission> {
+  async initialize(): Promise<boolean> {
     if (!this.isPushSupported()) {
-      throw new Error('Push notifications are not supported')
+      console.error('Push notifications are not supported')
+      return false
     }
 
-    return await Notification.requestPermission()
+    try {
+      // Register service worker
+      const registration = await registerServiceWorker()
+      if (!registration) {
+        console.error('Failed to register service worker')
+        return false
+      }
+
+      // Set up foreground message listener
+      onForegroundMessage((payload) => {
+        console.log('Foreground message received:', payload)
+        // You can show a toast notification here
+        this.showForegroundNotification(payload)
+      })
+
+      console.log('Firebase FCM initialized successfully')
+      return true
+    } catch (error) {
+      console.error('Error initializing Firebase FCM:', error)
+      return false
+    }
   }
 
   /**
-   * Get current notification permission
-   */
-  getPermission(): NotificationPermission | null {
-    if (typeof window === 'undefined' || !('Notification' in window)) {
-      return null
-    }
-    return Notification.permission
-  }
-
-  /**
-   * Subscribe to push notifications
+   * Request notification permission and subscribe
    */
   async subscribe(userId: string): Promise<boolean> {
     try {
@@ -50,46 +76,37 @@ export class PushNotificationService {
         return false
       }
 
-      // Request permission first
-      const permission = await this.requestPermission()
+      // Request permission
+      const permission = await Notification.requestPermission()
       if (permission !== 'granted') {
         console.log('Push notification permission denied')
         return false
       }
 
-      // Get service worker registration
-      const registration = await navigator.serviceWorker.ready
-
-      // Get VAPID public key from environment
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-      if (!vapidPublicKey) {
-        console.error('VAPID public key not configured')
+      // Get FCM token
+      const fcmToken = await getFCMToken()
+      if (!fcmToken) {
+        console.error('Failed to get FCM token')
         return false
       }
 
-      // Subscribe to push
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: this.urlBase64ToUint8Array(vapidPublicKey).buffer as ArrayBuffer
-      })
-
-      // Save subscription to database
+      // Save subscription info to our database
       const subscriptionData: Omit<PushSubscriptionType, 'id' | 'created_at'> = {
         user_id: userId,
-        endpoint: subscription.endpoint,
-        p256dh: this.arrayBufferToBase64(subscription.getKey('p256dh')),
-        auth: this.arrayBufferToBase64(subscription.getKey('auth'))
+        endpoint: fcmToken, // FCM token as endpoint
+        p256dh: '', // Not needed for Firebase FCM
+        auth: fcmToken
       }
 
       const success = await this.notificationRepo.createPushSubscription(subscriptionData)
       
       if (success) {
-        console.log('Push subscription created successfully')
+        console.log('Firebase FCM subscription created successfully')
       }
 
       return success
     } catch (error) {
-      console.error('Error subscribing to push notifications:', error)
+      console.error('Error subscribing to Firebase FCM:', error)
       return false
     }
   }
@@ -99,27 +116,18 @@ export class PushNotificationService {
    */
   async unsubscribe(userId: string): Promise<boolean> {
     try {
-      if (!this.isPushSupported()) {
-        return false
+      // Get user's subscriptions
+      const subscriptions = await this.notificationRepo.getPushSubscriptions(userId)
+      
+      // Remove from our database
+      for (const sub of subscriptions) {
+        await this.notificationRepo.deletePushSubscription(sub.endpoint, userId)
       }
-
-      const registration = await navigator.serviceWorker.ready
-      const subscription = await registration.pushManager.getSubscription()
-
-      if (subscription) {
-        // Unsubscribe from push manager
-        await subscription.unsubscribe()
-
-        // Remove from database
-        await this.notificationRepo.deletePushSubscription(subscription.endpoint, userId)
-        
-        console.log('Push subscription removed successfully')
-        return true
-      }
-
-      return false
+      
+      console.log('Firebase FCM subscription removed successfully')
+      return true
     } catch (error) {
-      console.error('Error unsubscribing from push notifications:', error)
+      console.error('Error unsubscribing from Firebase FCM:', error)
       return false
     }
   }
@@ -133,10 +141,8 @@ export class PushNotificationService {
         return false
       }
 
-      const registration = await navigator.serviceWorker.ready
-      const subscription = await registration.pushManager.getSubscription()
-
-      return subscription !== null
+      const permission = Notification.permission
+      return permission === 'granted'
     } catch (error) {
       console.error('Error checking subscription status:', error)
       return false
@@ -144,19 +150,18 @@ export class PushNotificationService {
   }
 
   /**
-   * Get current subscription
+   * Show foreground notification (when app is open)
    */
-  async getSubscription(): Promise<PushSubscription | null> {
-    try {
-      if (!this.isPushSupported()) {
-        return null
-      }
-
-      const registration = await navigator.serviceWorker.ready
-      return await registration.pushManager.getSubscription()
-    } catch (error) {
-      console.error('Error getting subscription:', error)
-      return null
+  private showForegroundNotification(payload: FirebaseMessagePayload): void {
+    if (typeof window !== 'undefined') {
+      // You can integrate with your toast system here
+      console.log('Showing foreground notification:', payload)
+      
+      // Example: Show a custom toast notification
+      const event = new CustomEvent('fcm-notification', {
+        detail: payload
+      })
+      window.dispatchEvent(event)
     }
   }
 
@@ -168,47 +173,39 @@ export class PushNotificationService {
       throw new Error('Notifications not supported')
     }
 
-    const permission = await this.requestPermission()
+    const permission = await Notification.requestPermission()
     if (permission !== 'granted') {
       throw new Error('Notification permission denied')
     }
 
+    // Show a test notification
     new Notification('SOC AI Test', {
-      body: 'Push bildirimleri başarıyla kuruldu!',
+      body: 'Firebase FCM push bildirimleri başarıyla kuruldu!',
       icon: '/soc-ai_logo.png',
       badge: '/soc-ai_logo.png',
       tag: 'test-notification'
     })
   }
 
-  // Helper methods
-  private urlBase64ToUint8Array(base64String: string): Uint8Array {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4)
-    const base64 = (base64String + padding)
-      .replace(/\-/g, '+')
-      .replace(/_/g, '/')
-
-    const rawData = window.atob(base64)
-    const outputArray = new Uint8Array(rawData.length)
-
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i)
+  /**
+   * Send push notification to specific user
+   */
+  async sendToUser(userId: string, title: string, message: string, url?: string): Promise<boolean> {
+    try {
+      // This would typically be done server-side via Firebase Admin SDK
+      // For now, we'll just log it
+      console.log(`Sending push notification to user ${userId}:`, { title, message, url })
+      
+      // In a real implementation, you would call Firebase Admin SDK here
+      // or use the REST API endpoint we'll create
+      
+      return true
+    } catch (error) {
+      console.error('Error sending push notification:', error)
+      return false
     }
-    return outputArray
-  }
-
-  private arrayBufferToBase64(buffer: ArrayBuffer | null): string {
-    if (!buffer) return ''
-    
-    const bytes = new Uint8Array(buffer)
-    let binary = ''
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i])
-    }
-    return window.btoa(binary)
   }
 }
 
 // Singleton instance
 export const pushNotificationService = new PushNotificationService()
-

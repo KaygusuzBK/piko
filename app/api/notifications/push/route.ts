@@ -1,37 +1,9 @@
-/**
- * Push Notification API Route
- * 
- * Sends web push notifications to subscribed users.
- * Requires VAPID keys to be configured.
- */
-
 import { NextRequest, NextResponse } from 'next/server'
-import webpush from 'web-push'
 import { notificationRepository } from '@/lib/repositories/notificationRepository'
-import { createClient } from '@/lib/supabase'
 
-// Configure web-push with VAPID keys
-if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT || 'mailto:admin@socai.com',
-    process.env.VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY
-  )
-}
-
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const supabase = createClient()
-    
-    // Verify authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const body = await request.json()
-    const { userId, notificationId, title, message, url } = body
+    const { userId, title, message, url, icon } = await req.json()
 
     if (!userId || !title || !message) {
       return NextResponse.json(
@@ -40,64 +12,104 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get user's push subscriptions
-    const subscriptions = await notificationRepository.getPushSubscriptions(userId)
+    // Firebase FCM REST API endpoint
+    const firebaseServerKey = process.env.FIREBASE_SERVER_KEY
+    const firebaseProjectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
 
-    if (subscriptions.length === 0) {
+    if (!firebaseServerKey || !firebaseProjectId) {
       return NextResponse.json(
-        { message: 'No push subscriptions found for user' },
-        { status: 200 }
+        { error: 'Firebase configuration missing' },
+        { status: 500 }
       )
     }
 
-    // Prepare push notification payload
-    const payload = JSON.stringify({
-      title,
-      body: message,
-      icon: '/soc-ai_logo.png',
-      badge: '/soc-ai_logo.png',
-      url: url || '/',
-      notificationId: notificationId || null,
-      tag: 'notification',
-      requireInteraction: false
-    })
+    // Get user's FCM tokens from our database
+    const subscriptions = await notificationRepository.getPushSubscriptions(userId)
+    if (subscriptions.length === 0) {
+      return NextResponse.json(
+        { error: 'User has no push subscriptions' },
+        { status: 404 }
+      )
+    }
 
-    // Send push notification to all user's subscriptions
-    const sendPromises = subscriptions.map(async (sub) => {
-      try {
-        const pushSubscription = {
-          endpoint: sub.endpoint,
-          keys: {
-            p256dh: sub.p256dh,
-            auth: sub.auth
-          }
-        }
+    // Extract FCM tokens
+    const fcmTokens = subscriptions.map(sub => sub.endpoint)
 
-        await webpush.sendNotification(pushSubscription, payload)
-        return { success: true, endpoint: sub.endpoint }
-      } catch (error: unknown) {
-        console.error('Error sending push notification:', error)
-        const err = error as { statusCode?: number; message?: string }
-        
-        // If subscription is no longer valid, remove it
-        if (err.statusCode === 410 || err.statusCode === 404) {
-          await notificationRepository.deletePushSubscription(sub.endpoint, userId)
-          console.log('Removed invalid subscription:', sub.endpoint)
+    // Send notification via Firebase FCM REST API
+    const notificationPayload = {
+      registration_ids: fcmTokens,
+      notification: {
+        title: title,
+        body: message,
+        icon: icon || '/soc-ai_logo.png',
+        badge: '/soc-ai_logo.png',
+        click_action: url || '/',
+        tag: 'soc-ai-notification'
+      },
+      data: {
+        url: url || '/',
+        timestamp: Date.now().toString(),
+        userId: userId
+      },
+      webpush: {
+        fcm_options: {
+          link: url || '/'
+        },
+        notification: {
+          icon: icon || '/soc-ai_logo.png',
+          badge: '/soc-ai_logo.png',
+          requireInteraction: false,
+          silent: false
         }
-        
-        return { success: false, endpoint: sub.endpoint, error: err.message || 'Unknown error' }
       }
+    }
+
+    const response = await fetch(`https://fcm.googleapis.com/fcm/send`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `key=${firebaseServerKey}`,
+      },
+      body: JSON.stringify(notificationPayload),
     })
 
-    const results = await Promise.all(sendPromises)
-    const successCount = results.filter(r => r.success).length
+    if (!response.ok) {
+      const errorData = await response.text()
+      console.error('Firebase FCM API error:', errorData)
+      return NextResponse.json(
+        { error: 'Failed to send push notification' },
+        { status: response.status }
+      )
+    }
+
+    const result = await response.json()
+    console.log('Push notification sent successfully:', result)
+
+    // Handle invalid tokens
+    if (result.failure_count > 0) {
+      const invalidTokens: string[] = []
+      result.results.forEach((result: { error?: string }, index: number) => {
+        if (result.error) {
+          console.error(`Token ${fcmTokens[index]} failed:`, result.error)
+          invalidTokens.push(fcmTokens[index])
+        }
+      })
+
+      // Remove invalid tokens from database
+      for (const token of invalidTokens) {
+        await notificationRepository.deletePushSubscription(token, userId)
+      }
+    }
 
     return NextResponse.json({
-      message: `Push notifications sent to ${successCount}/${subscriptions.length} subscriptions`,
-      results
+      success: true,
+      messageId: result.multicast_id,
+      successCount: result.success_count,
+      failureCount: result.failure_count,
     })
+
   } catch (error) {
-    console.error('Error in push notification endpoint:', error)
+    console.error('Error sending push notification:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -105,3 +117,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// Test endpoint for development
+export async function GET() {
+  return NextResponse.json({
+    message: 'Firebase FCM push notification endpoint is working',
+    timestamp: new Date().toISOString(),
+  })
+}

@@ -1,8 +1,8 @@
 /**
- * PushSubscriptionBanner Component
+ * PushSubscriptionBanner Component (Firebase FCM)
  * 
  * Banner to request push notification permission from users.
- * Shows only if not already subscribed and permission not denied.
+ * Uses Firebase FCM instead of OneSignal or VAPID.
  */
 
 'use client'
@@ -34,16 +34,14 @@ export function PushSubscriptionBanner() {
         return
       }
 
-      // Don't show if permission is denied
-      const permission = pushNotificationService.getPermission()
-      if (permission === 'denied') {
+      // Check notification permission
+      if (Notification.permission === 'granted') {
         setShow(false)
         return
       }
 
-      // Don't show if already subscribed
-      const isSubscribed = await pushNotificationService.isSubscribed()
-      if (isSubscribed) {
+      // Don't show if permission is denied
+      if (Notification.permission === 'denied') {
         setShow(false)
         return
       }
@@ -67,6 +65,17 @@ export function PushSubscriptionBanner() {
 
     try {
       setLoading(true)
+      
+      // Initialize Firebase FCM first
+      const initialized = await pushNotificationService.initialize()
+      if (!initialized) {
+        toast.error('Firebase FCM başlatılamadı', {
+          description: 'Lütfen sayfayı yenileyin ve tekrar deneyin'
+        })
+        return
+      }
+
+      // Subscribe to push notifications
       const success = await pushNotificationService.subscribe(user.id)
 
       if (success) {
@@ -143,4 +152,3 @@ export function PushSubscriptionBanner() {
     </div>
   )
 }
-
