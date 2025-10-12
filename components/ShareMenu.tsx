@@ -92,6 +92,7 @@ export function ShareMenu({ postId, postContent }: ShareMenuProps) {
         <Button
           variant="ghost"
           size="sm"
+          onClick={(e) => e.stopPropagation()}
           className="text-muted-foreground hover:text-foreground dark:text-white/80 dark:hover:text-white h-6 sm:h-7 px-1 sm:px-2 transition-all duration-200 hover:scale-110"
         >
           <ArrowUpFromLine className="h-3 w-3 sm:h-4 sm:w-4 transition-transform duration-200 hover:translate-y-[-2px]" />

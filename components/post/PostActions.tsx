@@ -42,7 +42,10 @@ export function PostActions({
         <Button
           variant="ghost"
           size="sm"
-          onClick={onComment}
+          onClick={(e) => {
+            e.stopPropagation()
+            onComment()
+          }}
           className="flex items-center space-x-1 text-muted-foreground hover:text-foreground dark:text-white/80 dark:hover:text-white h-6 sm:h-7 px-1 sm:px-2 transition-all duration-200 hover:scale-110"
         >
           <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4 transition-transform duration-200 hover:rotate-12" />
@@ -52,7 +55,10 @@ export function PostActions({
         <Button
           variant="ghost"
           size="sm"
-          onClick={onRetweet}
+          onClick={(e) => {
+            e.stopPropagation()
+            onRetweet()
+          }}
           className={`flex items-center space-x-1 h-6 sm:h-7 px-1 sm:px-2 transition-all duration-200 hover:scale-110 ${
             isRetweeted
               ? 'text-pink-400'
@@ -73,7 +79,10 @@ export function PostActions({
         <Button
           variant="ghost"
           size="sm"
-          onClick={onLike}
+          onClick={(e) => {
+            e.stopPropagation()
+            onLike()
+          }}
           className={`flex items-center space-x-1 h-6 sm:h-7 px-1 sm:px-2 transition-all duration-200 hover:scale-110 ${
             isLiked
               ? 'text-destructive'
@@ -87,7 +96,10 @@ export function PostActions({
         <Button
           variant="ghost"
           size="sm"
-          onClick={onBookmark}
+          onClick={(e) => {
+            e.stopPropagation()
+            onBookmark()
+          }}
           className={`flex items-center space-x-1 h-6 sm:h-7 px-1 sm:px-2 transition-all duration-200 hover:scale-110 ${
             isBookmarked
               ? 'text-yellow-400'

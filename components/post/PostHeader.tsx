@@ -33,7 +33,12 @@ export function PostHeader({ author, createdAt, canDelete, onDelete }: PostHeade
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-6 w-6 sm:h-7 sm:w-7 flex-shrink-0">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={(e) => e.stopPropagation()}
+            className="h-6 w-6 sm:h-7 sm:w-7 flex-shrink-0"
+          >
             <MoreHorizontal className="h-3 w-3 sm:h-4 sm:w-4" />
             <span className="sr-only">Daha fazla</span>
           </Button>

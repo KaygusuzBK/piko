@@ -114,7 +114,12 @@ export function PostCard({
       disableNavigation ||
       target.closest('button') ||
       target.closest('a') ||
-      target.closest('[role="button"]')
+      target.closest('[role="button"]') ||
+      target.closest('[role="dialog"]') ||
+      target.closest('[role="menu"]') ||
+      target.closest('[data-radix-popper-content-wrapper]') ||
+      target.closest('[data-state]') ||
+      target.hasAttribute('data-radix-collection-item')
     ) {
       return
     }
