@@ -98,6 +98,16 @@ CREATE TABLE IF NOT EXISTS post_interactions (
   UNIQUE(user_id, post_id, type)
 );
 
+-- 4.1. Comments tablosu (yorumlar)
+CREATE TABLE IF NOT EXISTS comments (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  post_id UUID REFERENCES posts(id) ON DELETE CASCADE NOT NULL,
+  author_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  content TEXT NOT NULL CHECK (char_length(content) <= 280),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- 5. Indexler
 CREATE INDEX IF NOT EXISTS idx_posts_author_id ON posts(author_id);
 CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
@@ -106,6 +116,9 @@ CREATE INDEX IF NOT EXISTS idx_posts_author_type ON posts(author_id, type);
 CREATE INDEX IF NOT EXISTS idx_post_interactions_user_id ON post_interactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_post_interactions_post_id ON post_interactions(post_id);
 CREATE INDEX IF NOT EXISTS idx_post_interactions_user_type ON post_interactions(user_id, type);
+CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id);
+CREATE INDEX IF NOT EXISTS idx_comments_author_id ON comments(author_id);
+CREATE INDEX IF NOT EXISTS idx_comments_created_at ON comments(created_at DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON public.users(username) WHERE username IS NOT NULL;
 
 -- 5.1 Storage buckets for user images and post images
@@ -126,6 +139,7 @@ END $$;
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE post_interactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
 
 -- Storage RLS
 -- storage.objects zaten RLS açık; yeniden açmaya çalışmak owner yetkisi ister ve hata verir
@@ -223,6 +237,17 @@ CREATE POLICY "Post interactions are viewable by everyone" ON post_interactions 
 CREATE POLICY "Users can create their own interactions" ON post_interactions FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can delete their own interactions" ON post_interactions FOR DELETE USING (auth.uid() = user_id);
 
+-- Comments politikaları
+DROP POLICY IF EXISTS "Comments are viewable by everyone" ON comments;
+DROP POLICY IF EXISTS "Users can create comments" ON comments;
+DROP POLICY IF EXISTS "Users can update their own comments" ON comments;
+DROP POLICY IF EXISTS "Users can delete their own comments" ON comments;
+
+CREATE POLICY "Comments are viewable by everyone" ON comments FOR SELECT USING (true);
+CREATE POLICY "Users can create comments" ON comments FOR INSERT WITH CHECK (auth.uid() = author_id);
+CREATE POLICY "Users can update their own comments" ON comments FOR UPDATE USING (auth.uid() = author_id);
+CREATE POLICY "Users can delete their own comments" ON comments FOR DELETE USING (auth.uid() = author_id);
+
 -- 7. Functions for updating counts
 CREATE OR REPLACE FUNCTION increment_likes_count(post_id UUID)
 RETURNS void AS $$
@@ -252,6 +277,20 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+CREATE OR REPLACE FUNCTION increment_comments_count(post_id UUID)
+RETURNS void AS $$
+BEGIN
+  UPDATE posts SET comments_count = comments_count + 1 WHERE id = post_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION decrement_comments_count(post_id UUID)
+RETURNS void AS $$
+BEGIN
+  UPDATE posts SET comments_count = GREATEST(comments_count - 1, 0) WHERE id = post_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- 8. Trigger for updating updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -272,9 +311,11 @@ END $$;
 -- Yeni trigger'ları oluştur
 DROP TRIGGER IF EXISTS update_users_updated_at ON public.users;
 DROP TRIGGER IF EXISTS update_posts_updated_at ON posts;
+DROP TRIGGER IF EXISTS update_comments_updated_at ON comments;
 
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_posts_updated_at BEFORE UPDATE ON posts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_comments_updated_at BEFORE UPDATE ON comments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- 9. Auto-create user profile on signup
 -- When a new user signs up via Supabase Auth, automatically create a row in public.users
