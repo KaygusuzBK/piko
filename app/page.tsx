@@ -9,6 +9,7 @@ import { LeftSidebar } from '@/components/LeftSidebar'
 import { RightSidebar } from '@/components/RightSidebar'
 import { useFeedPosts } from '@/hooks/usePosts'
 import { usePostInteractions } from '@/hooks/usePostInteractions'
+import { deletePost } from '@/lib/posts'
 
 export default function Home() {
   const { user, loading } = useAuthStore()
@@ -160,6 +161,31 @@ export default function Home() {
     console.log('Comment on post:', postId)
   }, [])
 
+  const handleDelete = useCallback(async (postId: string) => {
+    if (!user?.id) return
+
+    // Confirm deletion
+    if (!confirm('Bu gönderiyi silmek istediğinizden emin misiniz?')) {
+      return
+    }
+
+    // Optimistic update - remove from UI immediately
+    setPosts(prevPosts => prevPosts.filter(post => post.id !== postId))
+
+    try {
+      const success = await deletePost(postId, user.id)
+      if (!success) {
+        // Revert on error
+        alert('Gönderi silinemedi. Lütfen tekrar deneyin.')
+        refresh()
+      }
+    } catch (error) {
+      console.error('Error deleting post:', error)
+      alert('Gönderi silinirken hata oluştu.')
+      refresh()
+    }
+  }, [user?.id, setPosts, refresh])
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -190,7 +216,7 @@ export default function Home() {
             onBookmark={handleBookmark}
             onComment={handleComment}
             currentUserId={user.id}
-            onDelete={refresh}
+            onDelete={handleDelete}
           />
 
           <RightSidebar />

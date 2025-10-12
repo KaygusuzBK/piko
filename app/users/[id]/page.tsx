@@ -276,8 +276,33 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
 
   const handleDelete = async (postId: string) => {
     if (!user?.id) return
-    await deletePost(postId, user.id)
-    refresh()
+
+    // Confirm deletion
+    if (!confirm('Bu gönderiyi silmek istediğinizden emin misiniz?')) {
+      return
+    }
+
+    // Optimistic update - remove from all lists
+    const updateAllLists = (filterFn: (post: PostWithAuthor) => boolean) => {
+      setPosts(prev => prev.filter(filterFn))
+      setLikedPosts(prev => prev.filter(filterFn))
+      setFavoritePosts(prev => prev.filter(filterFn))
+      setMediaPosts(prev => prev.filter(filterFn))
+    }
+
+    updateAllLists(post => post.id !== postId)
+
+    try {
+      const success = await deletePost(postId, user.id)
+      if (!success) {
+        alert('Gönderi silinemedi. Lütfen tekrar deneyin.')
+        refresh()
+      }
+    } catch (error) {
+      console.error('Error deleting post:', error)
+      alert('Gönderi silinirken hata oluştu.')
+      refresh()
+    }
   }
 
   if (loading || userLoading) {
