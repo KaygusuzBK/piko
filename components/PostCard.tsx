@@ -96,7 +96,7 @@ export function PostCard({
   }
 
   return (
-    <Card className="w-full border border-border bg-[#171717]">
+    <Card className="w-full border border-border bg-transparent dark:bg-[#171717]">
       <CardContent className="p-2 sm:p-3">
         <div className="flex space-x-2 sm:space-x-3 transition-transform duration-500 relative">
           {/* Soft gradient in top-left corner */}
