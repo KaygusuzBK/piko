@@ -89,31 +89,63 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
   const handleLike = async (postId: string) => {
     if (!user?.id) return
     
-    // Optimistic update
-    updatePostInAllLists(postId, (post) => {
-      const isCurrentlyLiked = post.user_interaction_status?.isLiked || false
-      return {
-        ...post,
-        likes_count: isCurrentlyLiked ? post.likes_count - 1 : post.likes_count + 1,
+    const post = [...posts, ...likedPosts, ...favoritePosts].find(p => p.id === postId)
+    const isCurrentlyLiked = post?.user_interaction_status?.isLiked || false
+    
+    // If unliking from "Beğeniler" tab, remove from list
+    if (isCurrentlyLiked && activeTab === 'likes') {
+      setLikedPosts(prev => prev.filter(p => p.id !== postId))
+      // Update in other lists
+      setPosts(prev => prev.map(p => p.id === postId ? {
+        ...p,
+        likes_count: p.likes_count - 1,
         user_interaction_status: {
-          isLiked: !isCurrentlyLiked,
-          isRetweeted: post.user_interaction_status?.isRetweeted || false,
-          isBookmarked: post.user_interaction_status?.isBookmarked || false
+          isLiked: false,
+          isRetweeted: p.user_interaction_status?.isRetweeted || false,
+          isBookmarked: p.user_interaction_status?.isBookmarked || false
         }
-      }
-    })
+      } : p))
+      setFavoritePosts(prev => prev.map(p => p.id === postId ? {
+        ...p,
+        likes_count: p.likes_count - 1,
+        user_interaction_status: {
+          isLiked: false,
+          isRetweeted: p.user_interaction_status?.isRetweeted || false,
+          isBookmarked: p.user_interaction_status?.isBookmarked || false
+        }
+      } : p))
+    } else {
+      // Normal optimistic update
+      updatePostInAllLists(postId, (post) => {
+        const isLiked = post.user_interaction_status?.isLiked || false
+        return {
+          ...post,
+          likes_count: isLiked ? post.likes_count - 1 : post.likes_count + 1,
+          user_interaction_status: {
+            isLiked: !isLiked,
+            isRetweeted: post.user_interaction_status?.isRetweeted || false,
+            isBookmarked: post.user_interaction_status?.isBookmarked || false
+          }
+        }
+      })
+    }
     
     try {
       await toggleLike(postId, user.id)
     } catch {
       // Revert on error
+      if (isCurrentlyLiked && activeTab === 'likes') {
+        // Re-add to liked posts
+        if (post) {
+          setLikedPosts(prev => [post, ...prev])
+        }
+      }
       updatePostInAllLists(postId, (post) => {
-        const isCurrentlyLiked = post.user_interaction_status?.isLiked || false
         return {
           ...post,
-          likes_count: isCurrentlyLiked ? post.likes_count - 1 : post.likes_count + 1,
+          likes_count: isCurrentlyLiked ? post.likes_count + 1 : post.likes_count - 1,
           user_interaction_status: {
-            isLiked: !isCurrentlyLiked,
+            isLiked: isCurrentlyLiked,
             isRetweeted: post.user_interaction_status?.isRetweeted || false,
             isBookmarked: post.user_interaction_status?.isBookmarked || false
           }
@@ -161,31 +193,61 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
   const handleBookmark = async (postId: string) => {
     if (!user?.id) return
     
-    // Optimistic update
-    updatePostInAllLists(postId, (post) => {
-      const isCurrentlyBookmarked = post.user_interaction_status?.isBookmarked || false
-      return {
-        ...post,
-        user_interaction_status: {
-          isLiked: post.user_interaction_status?.isLiked || false,
-          isRetweeted: post.user_interaction_status?.isRetweeted || false,
-          isBookmarked: !isCurrentlyBookmarked
-        }
-      }
-    })
+    const post = [...posts, ...likedPosts, ...favoritePosts].find(p => p.id === postId)
+    const isCurrentlyBookmarked = post?.user_interaction_status?.isBookmarked || false
     
-    try {
-      await toggleBookmark(postId, user.id)
-    } catch {
-      // Revert on error
+    // If removing bookmark from "Favoriler" tab, remove from list
+    if (isCurrentlyBookmarked && activeTab === 'favorites') {
+      setFavoritePosts(prev => prev.filter(p => p.id !== postId))
+      // Update in other lists
+      setPosts(prev => prev.map(p => p.id === postId ? {
+        ...p,
+        user_interaction_status: {
+          isLiked: p.user_interaction_status?.isLiked || false,
+          isRetweeted: p.user_interaction_status?.isRetweeted || false,
+          isBookmarked: false
+        }
+      } : p))
+      setLikedPosts(prev => prev.map(p => p.id === postId ? {
+        ...p,
+        user_interaction_status: {
+          isLiked: p.user_interaction_status?.isLiked || false,
+          isRetweeted: p.user_interaction_status?.isRetweeted || false,
+          isBookmarked: false
+        }
+      } : p))
+    } else {
+      // Normal optimistic update
       updatePostInAllLists(postId, (post) => {
-        const isCurrentlyBookmarked = post.user_interaction_status?.isBookmarked || false
+        const isBookmarked = post.user_interaction_status?.isBookmarked || false
         return {
           ...post,
           user_interaction_status: {
             isLiked: post.user_interaction_status?.isLiked || false,
             isRetweeted: post.user_interaction_status?.isRetweeted || false,
-            isBookmarked: !isCurrentlyBookmarked
+            isBookmarked: !isBookmarked
+          }
+        }
+      })
+    }
+    
+    try {
+      await toggleBookmark(postId, user.id)
+    } catch {
+      // Revert on error
+      if (isCurrentlyBookmarked && activeTab === 'favorites') {
+        // Re-add to favorites
+        if (post) {
+          setFavoritePosts(prev => [post, ...prev])
+        }
+      }
+      updatePostInAllLists(postId, (post) => {
+        return {
+          ...post,
+          user_interaction_status: {
+            isLiked: post.user_interaction_status?.isLiked || false,
+            isRetweeted: post.user_interaction_status?.isRetweeted || false,
+            isBookmarked: isCurrentlyBookmarked
           }
         }
       })
