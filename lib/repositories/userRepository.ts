@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase'
-import { User, UpdateUserPayload, ImageUploadType } from '@/lib/types'
+import { User, UpdateUserPayload, ImageUploadType, NotificationPreferences } from '@/lib/types'
 
 export class UserRepository {
   private supabase = createClient()
@@ -175,6 +175,107 @@ export class UserRepository {
       return true
     } catch (error) {
       console.error('Error ensuring profile:', error)
+      return false
+    }
+  }
+
+  /**
+   * Get notification preferences for a user
+   */
+  async getNotificationPreferences(userId: string): Promise<NotificationPreferences | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from('users')
+        .select('notification_preferences')
+        .eq('id', userId)
+        .single()
+
+      if (error) {
+        console.error('Error fetching notification preferences:', error)
+        return null
+      }
+
+      return data?.notification_preferences as NotificationPreferences || null
+    } catch (error) {
+      console.error('Error in getNotificationPreferences:', error)
+      return null
+    }
+  }
+
+  /**
+   * Update notification preferences for a user
+   */
+  async updateNotificationPreferences(
+    userId: string, 
+    preferences: Partial<NotificationPreferences>
+  ): Promise<boolean> {
+    try {
+      // First, get current preferences
+      const current = await this.getNotificationPreferences(userId)
+      
+      // Merge with new preferences
+      const updated = {
+        ...current,
+        ...preferences
+      }
+
+      const { error } = await this.supabase
+        .from('users')
+        .update({ notification_preferences: updated })
+        .eq('id', userId)
+
+      if (error) {
+        console.error('Error updating notification preferences:', error)
+        return false
+      }
+
+      return true
+    } catch (error) {
+      console.error('Error in updateNotificationPreferences:', error)
+      return false
+    }
+  }
+
+  /**
+   * Update email notifications enabled status
+   */
+  async updateEmailNotificationsEnabled(userId: string, enabled: boolean): Promise<boolean> {
+    try {
+      const { error } = await this.supabase
+        .from('users')
+        .update({ email_notifications_enabled: enabled })
+        .eq('id', userId)
+
+      if (error) {
+        console.error('Error updating email notifications:', error)
+        return false
+      }
+
+      return true
+    } catch (error) {
+      console.error('Error in updateEmailNotificationsEnabled:', error)
+      return false
+    }
+  }
+
+  /**
+   * Update push notifications enabled status
+   */
+  async updatePushNotificationsEnabled(userId: string, enabled: boolean): Promise<boolean> {
+    try {
+      const { error } = await this.supabase
+        .from('users')
+        .update({ push_notifications_enabled: enabled })
+        .eq('id', userId)
+
+      if (error) {
+        console.error('Error updating push notifications:', error)
+        return false
+      }
+
+      return true
+    } catch (error) {
+      console.error('Error in updatePushNotificationsEnabled:', error)
       return false
     }
   }

@@ -431,3 +431,278 @@ DROP TRIGGER IF EXISTS on_follow_delete ON follows;
 CREATE TRIGGER on_follow_delete
   AFTER DELETE ON follows
   FOR EACH ROW EXECUTE FUNCTION handle_follow_delete();
+
+-- 11. Notifications System
+-- 11.1 Add notification-related columns to users table
+ALTER TABLE public.users 
+ADD COLUMN IF NOT EXISTS unread_notifications_count INTEGER DEFAULT 0 CHECK (unread_notifications_count >= 0),
+ADD COLUMN IF NOT EXISTS email_notifications_enabled BOOLEAN DEFAULT true,
+ADD COLUMN IF NOT EXISTS push_notifications_enabled BOOLEAN DEFAULT true,
+ADD COLUMN IF NOT EXISTS notification_preferences JSONB DEFAULT '{"like": true, "comment": true, "retweet": true, "follow": true, "mention": true, "reply": true, "weekly_summary": true}';
+
+-- 11.2 Notifications table
+CREATE TABLE IF NOT EXISTS notifications (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('like', 'comment', 'retweet', 'follow', 'mention', 'reply', 'bookmark', 'weekly_summary', 'trending')),
+  actor_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+  post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
+  comment_id UUID REFERENCES comments(id) ON DELETE CASCADE,
+  message TEXT NOT NULL,
+  is_read BOOLEAN DEFAULT false,
+  is_emailed BOOLEAN DEFAULT false,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 11.3 Indexes for notifications
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(type);
+CREATE INDEX IF NOT EXISTS idx_notifications_actor_id ON notifications(actor_id);
+
+-- 11.4 Push subscriptions table for web push notifications
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  endpoint TEXT NOT NULL,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, endpoint)
+);
+
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON push_subscriptions(user_id);
+
+-- 11.5 RLS for notifications
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view their own notifications" ON notifications;
+DROP POLICY IF EXISTS "Users can update their own notifications" ON notifications;
+DROP POLICY IF EXISTS "Users can delete their own notifications" ON notifications;
+
+CREATE POLICY "Users can view their own notifications" ON notifications 
+  FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can update their own notifications" ON notifications 
+  FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete their own notifications" ON notifications 
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- System can insert notifications
+DROP POLICY IF EXISTS "System can insert notifications" ON notifications;
+CREATE POLICY "System can insert notifications" ON notifications 
+  FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Users can manage their own push subscriptions" ON push_subscriptions;
+CREATE POLICY "Users can manage their own push subscriptions" ON push_subscriptions 
+  FOR ALL USING (auth.uid() = user_id);
+
+-- 11.6 Functions for notification counts
+CREATE OR REPLACE FUNCTION increment_unread_notifications_count(user_id UUID)
+RETURNS void AS $$
+BEGIN
+  UPDATE public.users SET unread_notifications_count = unread_notifications_count + 1 WHERE id = user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION decrement_unread_notifications_count(user_id UUID)
+RETURNS void AS $$
+BEGIN
+  UPDATE public.users SET unread_notifications_count = GREATEST(unread_notifications_count - 1, 0) WHERE id = user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION reset_unread_notifications_count(user_id UUID)
+RETURNS void AS $$
+BEGIN
+  UPDATE public.users SET unread_notifications_count = 0 WHERE id = user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 11.7 Triggers for notification counts
+CREATE OR REPLACE FUNCTION handle_notification_insert()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Increment unread count for the user
+  PERFORM increment_unread_notifications_count(NEW.user_id);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION handle_notification_read()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- When a notification is marked as read, decrement the count
+  IF OLD.is_read = false AND NEW.is_read = true THEN
+    PERFORM decrement_unread_notifications_count(NEW.user_id);
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION handle_notification_delete()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- When an unread notification is deleted, decrement the count
+  IF OLD.is_read = false THEN
+    PERFORM decrement_unread_notifications_count(OLD.user_id);
+  END IF;
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_notification_insert ON notifications;
+CREATE TRIGGER on_notification_insert
+  AFTER INSERT ON notifications
+  FOR EACH ROW EXECUTE FUNCTION handle_notification_insert();
+
+DROP TRIGGER IF EXISTS on_notification_read ON notifications;
+CREATE TRIGGER on_notification_read
+  AFTER UPDATE ON notifications
+  FOR EACH ROW EXECUTE FUNCTION handle_notification_read();
+
+DROP TRIGGER IF EXISTS on_notification_delete ON notifications;
+CREATE TRIGGER on_notification_delete
+  AFTER DELETE ON notifications
+  FOR EACH ROW EXECUTE FUNCTION handle_notification_delete();
+
+-- 11.8 Auto-create notifications on interactions
+-- When someone likes a post
+CREATE OR REPLACE FUNCTION handle_like_notification()
+RETURNS TRIGGER AS $$
+DECLARE
+  post_author UUID;
+  actor_username TEXT;
+BEGIN
+  -- Get post author
+  SELECT author_id INTO post_author FROM posts WHERE id = NEW.post_id;
+  
+  -- Don't notify if user likes their own post
+  IF post_author != NEW.user_id THEN
+    -- Get actor username
+    SELECT username INTO actor_username FROM public.users WHERE id = NEW.user_id;
+    
+    -- Create notification
+    INSERT INTO notifications (user_id, type, actor_id, post_id, message)
+    VALUES (
+      post_author,
+      'like',
+      NEW.user_id,
+      NEW.post_id,
+      COALESCE(actor_username, 'Birisi') || ' gönderini beğendi'
+    );
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- When someone retweets a post
+CREATE OR REPLACE FUNCTION handle_retweet_notification()
+RETURNS TRIGGER AS $$
+DECLARE
+  post_author UUID;
+  actor_username TEXT;
+BEGIN
+  -- Get post author
+  SELECT author_id INTO post_author FROM posts WHERE id = NEW.post_id;
+  
+  -- Don't notify if user retweets their own post
+  IF post_author != NEW.user_id THEN
+    -- Get actor username
+    SELECT username INTO actor_username FROM public.users WHERE id = NEW.user_id;
+    
+    -- Create notification
+    INSERT INTO notifications (user_id, type, actor_id, post_id, message)
+    VALUES (
+      post_author,
+      'retweet',
+      NEW.user_id,
+      NEW.post_id,
+      COALESCE(actor_username, 'Birisi') || ' gönderini retweetledi'
+    );
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- When someone comments on a post
+CREATE OR REPLACE FUNCTION handle_comment_notification()
+RETURNS TRIGGER AS $$
+DECLARE
+  post_author UUID;
+  actor_username TEXT;
+BEGIN
+  -- Get post author
+  SELECT author_id INTO post_author FROM posts WHERE id = NEW.post_id;
+  
+  -- Don't notify if user comments on their own post
+  IF post_author != NEW.author_id THEN
+    -- Get actor username
+    SELECT username INTO actor_username FROM public.users WHERE id = NEW.author_id;
+    
+    -- Create notification
+    INSERT INTO notifications (user_id, type, actor_id, post_id, comment_id, message)
+    VALUES (
+      post_author,
+      'comment',
+      NEW.author_id,
+      NEW.post_id,
+      NEW.id,
+      COALESCE(actor_username, 'Birisi') || ' gönderine yorum yaptı'
+    );
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- When someone follows another user
+CREATE OR REPLACE FUNCTION handle_follow_notification()
+RETURNS TRIGGER AS $$
+DECLARE
+  follower_username TEXT;
+BEGIN
+  -- Get follower username
+  SELECT username INTO follower_username FROM public.users WHERE id = NEW.follower_id;
+  
+  -- Create notification
+  INSERT INTO notifications (user_id, type, actor_id, message)
+  VALUES (
+    NEW.following_id,
+    'follow',
+    NEW.follower_id,
+    COALESCE(follower_username, 'Birisi') || ' seni takip etmeye başladı'
+  );
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create triggers for auto-notifications
+DROP TRIGGER IF EXISTS on_like_notification ON post_interactions;
+CREATE TRIGGER on_like_notification
+  AFTER INSERT ON post_interactions
+  FOR EACH ROW
+  WHEN (NEW.type = 'like')
+  EXECUTE FUNCTION handle_like_notification();
+
+DROP TRIGGER IF EXISTS on_retweet_notification ON post_interactions;
+CREATE TRIGGER on_retweet_notification
+  AFTER INSERT ON post_interactions
+  FOR EACH ROW
+  WHEN (NEW.type = 'retweet')
+  EXECUTE FUNCTION handle_retweet_notification();
+
+DROP TRIGGER IF EXISTS on_comment_notification ON comments;
+CREATE TRIGGER on_comment_notification
+  AFTER INSERT ON comments
+  FOR EACH ROW EXECUTE FUNCTION handle_comment_notification();
+
+DROP TRIGGER IF EXISTS on_follow_notification ON follows;
+CREATE TRIGGER on_follow_notification
+  AFTER INSERT ON follows
+  FOR EACH ROW EXECUTE FUNCTION handle_follow_notification();

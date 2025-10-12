@@ -8,6 +8,7 @@ import { MainFeed } from '@/components/MainFeed'
 import { LeftSidebar } from '@/components/LeftSidebar'
 import { RightSidebar } from '@/components/RightSidebar'
 import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog'
+import { PushSubscriptionBanner } from '@/components/notifications/PushSubscriptionBanner'
 import { useFeedPosts } from '@/hooks/usePosts'
 import { usePostInteractions } from '@/hooks/usePostInteractions'
 import { deletePost } from '@/lib/posts'
@@ -236,6 +237,8 @@ export default function Home() {
         onOpenChange={setDeleteDialogOpen}
         onConfirm={confirmDelete}
       />
+
+      <PushSubscriptionBanner />
     </>
   )
 }

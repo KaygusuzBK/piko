@@ -5,6 +5,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Toaster } from "sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,6 +20,13 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "SOC AI - Sosyal Medya",
   description: "Modern sosyal medya uygulaması",
+  manifest: "/manifest.json",
+  themeColor: "#000000",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "SOC AI"
+  }
 };
 
 export default function RootLayout({
@@ -40,6 +48,7 @@ export default function RootLayout({
           <AuthProvider>
             {children}
           </AuthProvider>
+          <Toaster position="top-right" richColors closeButton />
           <Analytics />
           <SpeedInsights />
         </ThemeProvider>

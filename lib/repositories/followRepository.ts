@@ -112,15 +112,15 @@ export async function getFollowers(userId: string, limit = 50): Promise<FollowUs
   return (data || [])
     .filter(item => item.follower)
     .map(item => {
-      const follower = item.follower as any
+      const follower = item.follower as unknown as Record<string, unknown>
       return {
-        id: follower.id,
-        name: follower.name,
-        username: follower.username,
-        avatar_url: follower.avatar_url,
-        bio: follower.bio,
-        followers_count: follower.followers_count || 0,
-        following_count: follower.following_count || 0,
+        id: follower.id as string,
+        name: (follower.name as string | null) || null,
+        username: (follower.username as string | null) || null,
+        avatar_url: (follower.avatar_url as string | null) || null,
+        bio: (follower.bio as string | null) || null,
+        followers_count: (follower.followers_count as number) || 0,
+        following_count: (follower.following_count as number) || 0,
       }
     })
 }
@@ -157,15 +157,15 @@ export async function getFollowing(userId: string, limit = 50): Promise<FollowUs
   return (data || [])
     .filter(item => item.following)
     .map(item => {
-      const following = item.following as any
+      const following = item.following as unknown as Record<string, unknown>
       return {
-        id: following.id,
-        name: following.name,
-        username: following.username,
-        avatar_url: following.avatar_url,
-        bio: following.bio,
-        followers_count: following.followers_count || 0,
-        following_count: following.following_count || 0,
+        id: following.id as string,
+        name: (following.name as string | null) || null,
+        username: (following.username as string | null) || null,
+        avatar_url: (following.avatar_url as string | null) || null,
+        bio: (following.bio as string | null) || null,
+        followers_count: (following.followers_count as number) || 0,
+        following_count: (following.following_count as number) || 0,
       }
     })
 }

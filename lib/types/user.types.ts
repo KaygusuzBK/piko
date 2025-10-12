@@ -11,6 +11,18 @@ export interface User {
   phone?: string
   followers_count?: number
   following_count?: number
+  unread_notifications_count?: number
+  email_notifications_enabled?: boolean
+  push_notifications_enabled?: boolean
+  notification_preferences?: {
+    like: boolean
+    comment: boolean
+    retweet: boolean
+    follow: boolean
+    mention: boolean
+    reply: boolean
+    weekly_summary: boolean
+  }
   created_at?: string
   updated_at?: string
 }
