@@ -1,8 +1,8 @@
 /**
- * PushSubscriptionBanner Component (OneSignal)
+ * PushSubscriptionBanner Component (Firebase FCM)
  * 
  * Banner to request push notification permission from users.
- * Uses OneSignal instead of VAPID.
+ * Uses Firebase FCM instead of OneSignal or VAPID.
  */
 
 'use client'
@@ -34,33 +34,27 @@ export function PushSubscriptionBanner() {
         return
       }
 
-      // Wait for OneSignal to load
-      const checkOneSignal = () => {
-        const OneSignal = window.OneSignal
-        if (OneSignal) {
-          OneSignal.Notifications.getPermission().then((permission: boolean) => {
-            if (permission) {
-              setShow(false)
-              return
-            }
-
-            // Check if user dismissed the banner
-            const dismissed = localStorage.getItem('push-banner-dismissed')
-            if (dismissed === 'true') {
-              setShow(false)
-              return
-            }
-
-            // Show the banner
-            setShow(true)
-          })
-        } else {
-          // Retry after 1 second if OneSignal not loaded yet
-          setTimeout(checkOneSignal, 1000)
-        }
+      // Check notification permission
+      if (Notification.permission === 'granted') {
+        setShow(false)
+        return
       }
-      
-      checkOneSignal()
+
+      // Don't show if permission is denied
+      if (Notification.permission === 'denied') {
+        setShow(false)
+        return
+      }
+
+      // Check if user dismissed the banner
+      const dismissed = localStorage.getItem('push-banner-dismissed')
+      if (dismissed === 'true') {
+        setShow(false)
+        return
+      }
+
+      // Show the banner
+      setShow(true)
     }
 
     checkSubscription()
@@ -71,6 +65,17 @@ export function PushSubscriptionBanner() {
 
     try {
       setLoading(true)
+      
+      // Initialize Firebase FCM first
+      const initialized = await pushNotificationService.initialize()
+      if (!initialized) {
+        toast.error('Firebase FCM başlatılamadı', {
+          description: 'Lütfen sayfayı yenileyin ve tekrar deneyin'
+        })
+        return
+      }
+
+      // Subscribe to push notifications
       const success = await pushNotificationService.subscribe(user.id)
 
       if (success) {

@@ -51,9 +51,13 @@ export default function RootLayout({
           </AuthProvider>
           <Toaster position="top-right" richColors closeButton />
           
-          {/* OneSignal SDK */}
+          {/* Firebase SDK */}
           <Script
-            src="https://cdn.onesignal.com/sdks/OneSignalSDK.js"
+            src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"
+            strategy="afterInteractive"
+          />
+          <Script
+            src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"
             strategy="afterInteractive"
           />
           

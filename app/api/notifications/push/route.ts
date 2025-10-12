@@ -12,18 +12,18 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // OneSignal REST API endpoint
-    const oneSignalAppId = process.env.ONESIGNAL_APP_ID
-    const oneSignalApiKey = process.env.ONESIGNAL_REST_API_KEY
+    // Firebase FCM REST API endpoint
+    const firebaseServerKey = process.env.FIREBASE_SERVER_KEY
+    const firebaseProjectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
 
-    if (!oneSignalAppId || !oneSignalApiKey) {
+    if (!firebaseServerKey || !firebaseProjectId) {
       return NextResponse.json(
-        { error: 'OneSignal configuration missing' },
+        { error: 'Firebase configuration missing' },
         { status: 500 }
       )
     }
 
-    // Get user's OneSignal player ID from our database
+    // Get user's FCM tokens from our database
     const subscriptions = await notificationRepository.getPushSubscriptions(userId)
     if (subscriptions.length === 0) {
       return NextResponse.json(
@@ -32,43 +32,50 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Extract OneSignal player IDs from our custom endpoint format
-    const playerIds = subscriptions
-      .filter(sub => sub.endpoint.startsWith('onesignal:'))
-      .map(sub => sub.endpoint.replace('onesignal:', ''))
+    // Extract FCM tokens
+    const fcmTokens = subscriptions.map(sub => sub.endpoint)
 
-    if (playerIds.length === 0) {
-      return NextResponse.json(
-        { error: 'No valid OneSignal subscriptions found' },
-        { status: 404 }
-      )
-    }
-
-    // Send notification via OneSignal REST API
+    // Send notification via Firebase FCM REST API
     const notificationPayload = {
-      app_id: oneSignalAppId,
-      include_player_ids: playerIds,
-      headings: { en: title },
-      contents: { en: message },
-      url: url || '/',
-      chrome_web_icon: icon || '/soc-ai_logo.png',
-      chrome_web_badge: '/soc-ai_logo.png',
-      priority: 10,
-      ttl: 3600, // 1 hour
+      registration_ids: fcmTokens,
+      notification: {
+        title: title,
+        body: message,
+        icon: icon || '/soc-ai_logo.png',
+        badge: '/soc-ai_logo.png',
+        click_action: url || '/',
+        tag: 'soc-ai-notification'
+      },
+      data: {
+        url: url || '/',
+        timestamp: Date.now().toString(),
+        userId: userId
+      },
+      webpush: {
+        fcm_options: {
+          link: url || '/'
+        },
+        notification: {
+          icon: icon || '/soc-ai_logo.png',
+          badge: '/soc-ai_logo.png',
+          requireInteraction: false,
+          silent: false
+        }
+      }
     }
 
-    const response = await fetch('https://onesignal.com/api/v1/notifications', {
+    const response = await fetch(`https://fcm.googleapis.com/fcm/send`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${oneSignalApiKey}`,
+        'Authorization': `key=${firebaseServerKey}`,
       },
       body: JSON.stringify(notificationPayload),
     })
 
     if (!response.ok) {
       const errorData = await response.text()
-      console.error('OneSignal API error:', errorData)
+      console.error('Firebase FCM API error:', errorData)
       return NextResponse.json(
         { error: 'Failed to send push notification' },
         { status: response.status }
@@ -76,12 +83,29 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await response.json()
-    console.log('Push notification sent successfully:', result.id)
+    console.log('Push notification sent successfully:', result)
+
+    // Handle invalid tokens
+    if (result.failure_count > 0) {
+      const invalidTokens: string[] = []
+      result.results.forEach((result: { error?: string }, index: number) => {
+        if (result.error) {
+          console.error(`Token ${fcmTokens[index]} failed:`, result.error)
+          invalidTokens.push(fcmTokens[index])
+        }
+      })
+
+      // Remove invalid tokens from database
+      for (const token of invalidTokens) {
+        await notificationRepository.deletePushSubscription(token, userId)
+      }
+    }
 
     return NextResponse.json({
       success: true,
-      notificationId: result.id,
-      recipients: result.recipients,
+      messageId: result.multicast_id,
+      successCount: result.success_count,
+      failureCount: result.failure_count,
     })
 
   } catch (error) {
@@ -96,7 +120,7 @@ export async function POST(req: NextRequest) {
 // Test endpoint for development
 export async function GET() {
   return NextResponse.json({
-    message: 'Push notification endpoint is working',
+    message: 'Firebase FCM push notification endpoint is working',
     timestamp: new Date().toISOString(),
   })
 }
