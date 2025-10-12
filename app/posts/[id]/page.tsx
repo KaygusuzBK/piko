@@ -6,14 +6,17 @@ import { Header } from '@/components/Header'
 import { LeftSidebar } from '@/components/LeftSidebar'
 import { RightSidebar } from '@/components/RightSidebar'
 import { PostActions } from '@/components/post/PostActions'
+import { CommentInput } from '@/components/CommentInput'
+import { CommentCard } from '@/components/CommentCard'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { getPostById, toggleLike, toggleRetweet, togglePostBookmark } from '@/lib/posts'
+import { createComment, getCommentsByPostId, deleteComment } from '@/lib/comments'
 import { useAuthStore } from '@/stores/authStore'
-import { PostWithAuthor } from '@/lib/types'
+import { PostWithAuthor, CommentWithAuthor } from '@/lib/types'
 import Image from 'next/image'
 import { formatDistanceToNow } from 'date-fns'
 import { tr } from 'date-fns/locale'
@@ -25,7 +28,9 @@ export default function PostDetailPage() {
   const postId = params.id as string
 
   const [post, setPost] = useState<PostWithAuthor | null>(null)
+  const [comments, setComments] = useState<CommentWithAuthor[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingComments, setLoadingComments] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const loadPost = useCallback(async () => {
@@ -48,9 +53,76 @@ export default function PostDetailPage() {
     }
   }, [postId, user?.id])
 
+  const loadComments = useCallback(async () => {
+    if (!postId) return
+
+    setLoadingComments(true)
+    try {
+      const fetchedComments = await getCommentsByPostId(postId)
+      setComments(fetchedComments)
+    } catch (err) {
+      console.error('Error loading comments:', err)
+    } finally {
+      setLoadingComments(false)
+    }
+  }, [postId])
+
   useEffect(() => {
     loadPost()
-  }, [loadPost])
+    loadComments()
+  }, [loadPost, loadComments])
+
+  const handleCreateComment = useCallback(async (content: string) => {
+    if (!user?.id || !postId) return
+
+    try {
+      const newComment = await createComment({
+        post_id: postId,
+        author_id: user.id,
+        content
+      })
+
+      if (newComment) {
+        // Reload comments to get the full comment with author
+        await loadComments()
+        
+        // Update post comments count
+        setPost(prev => {
+          if (!prev) return prev
+          return {
+            ...prev,
+            comments_count: prev.comments_count + 1
+          }
+        })
+      }
+    } catch (error) {
+      console.error('Error creating comment:', error)
+      throw error
+    }
+  }, [user?.id, postId, loadComments])
+
+  const handleDeleteComment = useCallback(async (commentId: string) => {
+    if (!user?.id) return
+
+    try {
+      const success = await deleteComment(commentId, user.id)
+      if (success) {
+        setComments(prev => prev.filter(c => c.id !== commentId))
+        
+        // Update post comments count
+        setPost(prev => {
+          if (!prev) return prev
+          return {
+            ...prev,
+            comments_count: Math.max(0, prev.comments_count - 1)
+          }
+        })
+      }
+    } catch (error) {
+      console.error('Error deleting comment:', error)
+      throw error
+    }
+  }, [user?.id])
 
   const handleLike = useCallback(async (postId: string) => {
     if (!user?.id || !post) return
@@ -366,9 +438,39 @@ export default function PostDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Comments Section - Placeholder */}
-            <div className="p-4 sm:p-6">
-              <p className="text-center text-muted-foreground">Yorumlar yakında eklenecek...</p>
+            {/* Comments Section */}
+            <div className="border-t border-border">
+              {/* Comment Input */}
+              {user && (
+                <CommentInput 
+                  onSubmit={handleCreateComment}
+                  placeholder="Yorumunuzu yazın..."
+                />
+              )}
+
+              {/* Comments List */}
+              <div>
+                {loadingComments ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                ) : comments.length === 0 ? (
+                  <div className="py-8 px-4 text-center">
+                    <p className="text-muted-foreground">Henüz yorum yok. İlk yorumu siz yapın!</p>
+                  </div>
+                ) : (
+                  <div>
+                    {comments.map((comment) => (
+                      <CommentCard
+                        key={comment.id}
+                        comment={comment}
+                        canDelete={user?.id === comment.author_id}
+                        onDelete={handleDeleteComment}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
