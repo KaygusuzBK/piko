@@ -48,7 +48,7 @@ export function MainFeed({
   }, [setIsCreatePostCompact])
 
   return (
-    <div ref={mainFeedRef} className="main-feed lg:col-span-2 space-y-2 sm:space-y-3 h-full min-h-0 overflow-y-auto scrollbar-hide">
+    <div ref={mainFeedRef} className="main-feed lg:col-span-2 space-y-2 sm:space-y-3 h-full min-h-0 overflow-y-auto scrollbar-hide pb-20">
       <div className="sticky top-0 z-10 bg-soc-ai-header/60 backdrop-blur pb-3">
         <CreatePost onPostCreated={onPostCreated} isCompact={isCreatePostCompact} />
         <Separator className="mt-3" />

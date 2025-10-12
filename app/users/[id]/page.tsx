@@ -318,7 +318,7 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
 
           <div
             ref={scrollContainerRef}
-            className="lg:col-span-3 h-full min-h-0 overflow-y-auto scrollbar-hide border-x border-border"
+            className="lg:col-span-3 h-full min-h-0 overflow-y-auto scrollbar-hide border-x border-border pb-20"
           >
             <div className="sticky top-0 z-10 bg-background/60 backdrop-blur px-3 sm:px-4 py-2 flex items-center space-x-4 border-b border-border">
               <Button

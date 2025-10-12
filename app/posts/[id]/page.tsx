@@ -254,7 +254,7 @@ export default function PostDetailPage() {
         <main className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-4 pt-4 sm:pt-6 pb-0 overflow-hidden min-h-0">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 h-full min-h-0">
             <LeftSidebar />
-            <div className="lg:col-span-2 h-full min-h-0 overflow-y-auto scrollbar-hide border-x border-border">
+            <div className="lg:col-span-2 h-full min-h-0 overflow-y-auto scrollbar-hide border-x border-border pb-20">
               <div className="flex items-center justify-center h-64">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
@@ -273,7 +273,7 @@ export default function PostDetailPage() {
         <main className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-4 pt-4 sm:pt-6 pb-0 overflow-hidden min-h-0">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 h-full min-h-0">
             <LeftSidebar />
-            <div className="lg:col-span-2 h-full min-h-0 overflow-y-auto scrollbar-hide border-x border-border">
+            <div className="lg:col-span-2 h-full min-h-0 overflow-y-auto scrollbar-hide border-x border-border pb-20">
               <div className="sticky top-0 z-10 bg-soc-ai-header/60 backdrop-blur px-3 sm:px-4 py-3 border-b border-border">
                 <div className="flex items-center space-x-4">
                   <Button
@@ -309,7 +309,7 @@ export default function PostDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 h-full min-h-0">
           <LeftSidebar />
 
-          <div className="lg:col-span-2 h-full min-h-0 overflow-y-auto scrollbar-hide border-x border-border">
+          <div className="lg:col-span-2 h-full min-h-0 overflow-y-auto scrollbar-hide border-x border-border pb-20">
             {/* Header */}
             <div className="sticky top-0 z-10 bg-soc-ai-header/60 backdrop-blur px-3 sm:px-4 py-3 border-b border-border">
               <div className="flex items-center space-x-4">
