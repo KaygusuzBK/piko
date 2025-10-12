@@ -53,6 +53,10 @@ export class PostQueryService {
     return this.fetchPostsWithInteractions({ limit, offset }, viewerUserId)
   }
 
+  async getPersonalizedFeedPosts(userId: string, limit: number = 20, offset: number = 0, viewerUserId?: string): Promise<PostWithAuthor[]> {
+    return this.fetchPostsWithInteractions({ followingUserId: userId, limit, offset }, viewerUserId)
+  }
+
   async getUserPosts(userId: string, limit: number = 20, offset: number = 0, viewerUserId?: string): Promise<PostWithAuthor[]> {
     return this.fetchPostsWithInteractions({ authorId: userId, limit, offset }, viewerUserId)
   }

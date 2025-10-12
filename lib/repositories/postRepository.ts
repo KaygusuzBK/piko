@@ -156,6 +156,27 @@ export class PostRepository {
           .eq('post_interactions.type', 'bookmark')
       }
 
+      // For personalized feed - posts from users that current user follows
+      if (filters.followingUserId) {
+        query = query
+          .select(`
+            *,
+            author:users!posts_author_id_fkey (
+              id,
+              username,
+              avatar_url
+            ),
+            user_interactions:post_interactions!left (
+              type,
+              user_id
+            ),
+            follows!inner (
+              follower_id
+            )
+          `)
+          .eq('follows.follower_id', filters.followingUserId)
+      }
+
       query = query.order('created_at', { ascending: false })
 
       if (filters.limit !== undefined) {

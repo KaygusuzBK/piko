@@ -12,6 +12,8 @@ ADD COLUMN IF NOT EXISTS bio TEXT,
 ADD COLUMN IF NOT EXISTS website TEXT,
 ADD COLUMN IF NOT EXISTS location TEXT,
 ADD COLUMN IF NOT EXISTS phone TEXT,
+ADD COLUMN IF NOT EXISTS followers_count INTEGER DEFAULT 0 CHECK (followers_count >= 0),
+ADD COLUMN IF NOT EXISTS following_count INTEGER DEFAULT 0 CHECK (following_count >= 0),
 ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
@@ -108,6 +110,16 @@ CREATE TABLE IF NOT EXISTS comments (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- 4.2. Follows tablosu (takip sistemi)
+CREATE TABLE IF NOT EXISTS follows (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  follower_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  following_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(follower_id, following_id),
+  CHECK (follower_id != following_id)
+);
+
 -- 5. Indexler
 CREATE INDEX IF NOT EXISTS idx_posts_author_id ON posts(author_id);
 CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
@@ -119,6 +131,9 @@ CREATE INDEX IF NOT EXISTS idx_post_interactions_user_type ON post_interactions(
 CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id);
 CREATE INDEX IF NOT EXISTS idx_comments_author_id ON comments(author_id);
 CREATE INDEX IF NOT EXISTS idx_comments_created_at ON comments(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_follows_follower_id ON follows(follower_id);
+CREATE INDEX IF NOT EXISTS idx_follows_following_id ON follows(following_id);
+CREATE INDEX IF NOT EXISTS idx_follows_follower_following ON follows(follower_id, following_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON public.users(username) WHERE username IS NOT NULL;
 
 -- 5.1 Storage buckets for user images and post images
@@ -140,6 +155,7 @@ ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE post_interactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE follows ENABLE ROW LEVEL SECURITY;
 
 -- Storage RLS
 -- storage.objects zaten RLS açık; yeniden açmaya çalışmak owner yetkisi ister ve hata verir
@@ -248,6 +264,15 @@ CREATE POLICY "Users can create comments" ON comments FOR INSERT WITH CHECK (aut
 CREATE POLICY "Users can update their own comments" ON comments FOR UPDATE USING (auth.uid() = author_id);
 CREATE POLICY "Users can delete their own comments" ON comments FOR DELETE USING (auth.uid() = author_id);
 
+-- Follows politikaları
+DROP POLICY IF EXISTS "Follows are viewable by everyone" ON follows;
+DROP POLICY IF EXISTS "Users can follow others" ON follows;
+DROP POLICY IF EXISTS "Users can unfollow others" ON follows;
+
+CREATE POLICY "Follows are viewable by everyone" ON follows FOR SELECT USING (true);
+CREATE POLICY "Users can follow others" ON follows FOR INSERT WITH CHECK (auth.uid() = follower_id);
+CREATE POLICY "Users can unfollow others" ON follows FOR DELETE USING (auth.uid() = follower_id);
+
 -- 7. Functions for updating counts
 CREATE OR REPLACE FUNCTION increment_likes_count(post_id UUID)
 RETURNS void AS $$
@@ -288,6 +313,35 @@ CREATE OR REPLACE FUNCTION decrement_comments_count(post_id UUID)
 RETURNS void AS $$
 BEGIN
   UPDATE posts SET comments_count = GREATEST(comments_count - 1, 0) WHERE id = post_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Follower count functions
+CREATE OR REPLACE FUNCTION increment_followers_count(user_id UUID)
+RETURNS void AS $$
+BEGIN
+  UPDATE public.users SET followers_count = followers_count + 1 WHERE id = user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION decrement_followers_count(user_id UUID)
+RETURNS void AS $$
+BEGIN
+  UPDATE public.users SET followers_count = GREATEST(followers_count - 1, 0) WHERE id = user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION increment_following_count(user_id UUID)
+RETURNS void AS $$
+BEGIN
+  UPDATE public.users SET following_count = following_count + 1 WHERE id = user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION decrement_following_count(user_id UUID)
+RETURNS void AS $$
+BEGIN
+  UPDATE public.users SET following_count = GREATEST(following_count - 1, 0) WHERE id = user_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -341,3 +395,39 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 10. Triggers for follow/unfollow counts
+-- When someone follows a user, increment both follower and following counts
+CREATE OR REPLACE FUNCTION handle_follow_insert()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Increment following_count of the follower
+  PERFORM increment_following_count(NEW.follower_id);
+  -- Increment followers_count of the followed user
+  PERFORM increment_followers_count(NEW.following_id);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- When someone unfollows a user, decrement both follower and following counts
+CREATE OR REPLACE FUNCTION handle_follow_delete()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Decrement following_count of the follower
+  PERFORM decrement_following_count(OLD.follower_id);
+  -- Decrement followers_count of the followed user
+  PERFORM decrement_followers_count(OLD.following_id);
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create triggers
+DROP TRIGGER IF EXISTS on_follow_insert ON follows;
+CREATE TRIGGER on_follow_insert
+  AFTER INSERT ON follows
+  FOR EACH ROW EXECUTE FUNCTION handle_follow_insert();
+
+DROP TRIGGER IF EXISTS on_follow_delete ON follows;
+CREATE TRIGGER on_follow_delete
+  AFTER DELETE ON follows
+  FOR EACH ROW EXECUTE FUNCTION handle_follow_delete();

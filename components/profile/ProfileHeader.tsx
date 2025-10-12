@@ -2,16 +2,18 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Camera, Edit2 } from 'lucide-react'
 import { User } from '@/lib/types'
+import { FollowButton } from '@/components/FollowButton'
 
 interface ProfileHeaderProps {
   user: User
   isOwner: boolean
   isCompact: boolean
+  currentUserId?: string
   onBannerChange?: (file: File) => void
   onAvatarChange?: (file: File) => void
 }
 
-export function ProfileHeader({ user, isOwner, isCompact, onBannerChange, onAvatarChange }: ProfileHeaderProps) {
+export function ProfileHeader({ user, isOwner, isCompact, currentUserId, onBannerChange, onAvatarChange }: ProfileHeaderProps) {
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file && onBannerChange) {
@@ -80,15 +82,25 @@ export function ProfileHeader({ user, isOwner, isCompact, onBannerChange, onAvat
             )}
           </div>
 
-          {!isCompact && isOwner && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-2"
-              onClick={() => {}}
-            >
-              Profili Düzenle
-            </Button>
+          {!isCompact && (
+            isOwner ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => {}}
+              >
+                Profili Düzenle
+              </Button>
+            ) : (
+              <div className="mt-2">
+                <FollowButton
+                  currentUserId={currentUserId}
+                  targetUserId={user.id}
+                  size="sm"
+                />
+              </div>
+            )
           )}
         </div>
 
@@ -103,6 +115,17 @@ export function ProfileHeader({ user, isOwner, isCompact, onBannerChange, onAvat
                 {user.website && <a href={user.website} target="_blank" rel="noopener noreferrer" className="hover:underline">🔗 {user.website}</a>}
               </div>
             )}
+            {/* Follow Stats */}
+            <div className="flex gap-4 mt-3 text-sm">
+              <button className="hover:underline transition-colors">
+                <span className="font-bold">{user.following_count || 0}</span>{' '}
+                <span className="text-muted-foreground">Takip Edilen</span>
+              </button>
+              <button className="hover:underline transition-colors">
+                <span className="font-bold">{user.followers_count || 0}</span>{' '}
+                <span className="text-muted-foreground">Takipçi</span>
+              </button>
+            </div>
           </div>
         )}
       </div>

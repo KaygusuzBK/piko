@@ -9,6 +9,8 @@ export interface User {
   website?: string
   location?: string
   phone?: string
+  followers_count?: number
+  following_count?: number
   created_at?: string
   updated_at?: string
 }

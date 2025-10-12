@@ -41,6 +41,7 @@ export interface PostQueryFilters {
   authorId?: string
   likedByUserId?: string
   bookmarkedByUserId?: string
+  followingUserId?: string
   type?: PostType
   limit?: number
   offset?: number

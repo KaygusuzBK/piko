@@ -373,6 +373,7 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
                 user={dbUser}
                 isOwner={isOwner}
                 isCompact={isCompact}
+                currentUserId={user?.id}
                 onAvatarChange={handleAvatarChange}
                 onBannerChange={handleBannerChange}
               />
