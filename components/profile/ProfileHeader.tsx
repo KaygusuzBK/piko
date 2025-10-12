@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Camera, Edit2 } from 'lucide-react'
 import { User } from '@/lib/types'
 import { FollowButton } from '@/components/FollowButton'
+import { useRouter } from 'next/navigation'
 
 interface ProfileHeaderProps {
   user: User
@@ -14,6 +15,8 @@ interface ProfileHeaderProps {
 }
 
 export function ProfileHeader({ user, isOwner, isCompact, currentUserId, onBannerChange, onAvatarChange }: ProfileHeaderProps) {
+  const router = useRouter()
+
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file && onBannerChange) {
@@ -26,6 +29,14 @@ export function ProfileHeader({ user, isOwner, isCompact, currentUserId, onBanne
     if (file && onAvatarChange) {
       onAvatarChange(file)
     }
+  }
+
+  const handleFollowingClick = () => {
+    router.push(`/users/${user.id}/following`)
+  }
+
+  const handleFollowersClick = () => {
+    router.push(`/users/${user.id}/followers`)
   }
 
   return (
@@ -117,11 +128,17 @@ export function ProfileHeader({ user, isOwner, isCompact, currentUserId, onBanne
             )}
             {/* Follow Stats */}
             <div className="flex gap-4 mt-3 text-sm">
-              <button className="hover:underline transition-colors">
+              <button 
+                onClick={handleFollowingClick}
+                className="hover:underline transition-colors cursor-pointer"
+              >
                 <span className="font-bold">{user.following_count || 0}</span>{' '}
                 <span className="text-muted-foreground">Takip Edilen</span>
               </button>
-              <button className="hover:underline transition-colors">
+              <button 
+                onClick={handleFollowersClick}
+                className="hover:underline transition-colors cursor-pointer"
+              >
                 <span className="font-bold">{user.followers_count || 0}</span>{' '}
                 <span className="text-muted-foreground">Takipçi</span>
               </button>
