@@ -49,7 +49,7 @@ export function MainFeed({
 
   return (
     <div ref={mainFeedRef} className="main-feed lg:col-span-2 space-y-2 sm:space-y-3 h-full min-h-0 overflow-y-auto scrollbar-hide">
-      <div className="sticky top-0 z-10 bg-piko-header/60 backdrop-blur pb-3">
+      <div className="sticky top-0 z-10 bg-soc-ai-header/60 backdrop-blur pb-3">
         <CreatePost onPostCreated={onPostCreated} isCompact={isCreatePostCompact} />
         <Separator className="mt-3" />
       </div>
@@ -63,10 +63,10 @@ export function MainFeed({
                 <span className="text-2xl sm:text-3xl">✨</span>
               </div>
               <h3 className="text-lg sm:text-xl font-semibold text-foreground">
-                Henüz piko yok
+                Henüz soc-ai yok
               </h3>
               <p className="text-sm text-muted-foreground max-w-md">
-                İlk pikonu sen at! Düşündüğün bir şeyi paylaş ve sohbeti başlat.
+                İlk soc-ai&apos;nı sen at! Düşündüğün bir şeyi paylaş ve sohbeti başlat.
               </p>
               <Button
                 className="mt-2"

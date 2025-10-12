@@ -109,7 +109,7 @@ export default function EditProfilePage({ params }: PageProps) {
     <div className="min-h-screen bg-transparent">
       <Header />
       <main className="max-w-3xl w-full mx-auto px-4 sm:px-6 py-6 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] overflow-y-auto min-h-0">
-        <Card className="border-border bg-piko-navy-dark/80 text-white">
+        <Card className="border-border bg-soc-ai-navy-dark/80 text-white">
           <CardContent className="p-4 sm:p-6">
             <FieldSet className="gap-5 sm:gap-6">
               <FieldLegend className="text-white">Profili Düzenle</FieldLegend>

@@ -8,10 +8,10 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --color-piko-dark: #000000;
-  --color-piko-gray: #666666;
-  --color-piko-brown: #ef4444;
-  --color-piko-cream: #ffffff;
+  --color-soc-ai-dark: #000000;
+  --color-soc-ai-gray: #666666;
+  --color-soc-ai-brown: #ef4444;
+  --color-soc-ai-cream: #ffffff;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -84,32 +84,32 @@
 
 /* Brand gradient tokens */
 :root {
-  --piko-gradient-start: #132440;
-  --piko-gradient-end: #16476A;
+  --soc-ai-gradient-start: #132440;
+  --soc-ai-gradient-end: #16476A;
 }
 
-.bg-piko-gradient {
+.bg-soc-ai-gradient {
   background-image: linear-gradient(135deg, #0a0a0a 0%, #161616 60%, #2b2b2b 100%);
 }
 
-.hover\:bg-piko-gradient:hover {
+.hover\:bg-soc-ai-gradient:hover {
   background-image: linear-gradient(135deg, #0a0a0a 0%, #161616 60%, #2b2b2b 100%);
 }
 
 /* Header/Top areas: navy (#132440) to burgundy (#BF092F) */
-.bg-piko-header {
+.bg-soc-ai-header {
   background-image: linear-gradient(135deg, #132440 0%, #BF092F 100%);
 }
 
 /* Darker variant for header in dark theme */
-.bg-piko-header-dark {
+.bg-soc-ai-header-dark {
   background-image:
     linear-gradient(0deg, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
     linear-gradient(135deg, #132440 0%, #BF092F 100%);
 }
 
 /* Solid dark navy for cards/inputs in top area */
-.bg-piko-navy-dark {
+.bg-soc-ai-navy-dark {
   background-color: #0D1A2A;
 }
 
@@ -161,7 +161,7 @@
     /* Light: çapraz beyaz → #BF092F → beyaz geçiş + yumuşatma */
     background:
       radial-gradient(900px 600px at 50% 50%, rgba(191, 9, 47, 0.10) 0%, rgba(191, 9, 47, 0) 70%),
-      linear-gradient(135deg, #ffffff 0%, #ffffff 28%, rgba(191, 9, 47, 0.60) 50%, #ffffff 72%, #ffffff 100%) !important;
+      linear-gradient(135deg, #ffffff 0%, #ffffff 28%, #bf092f99 50%, #ffffff 72%, #ffffff 100%) !important;
     background-attachment: fixed;
     background-repeat: no-repeat;
     background-size: cover;

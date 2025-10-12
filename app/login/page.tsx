@@ -44,7 +44,7 @@ export default function LoginPage() {
           <div className="relative">
             <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#BF092F] to-purple-600 opacity-60 blur-2xl animate-pulse"></div>
             <Image
-              src="/piko_logo.png"
+              src="/soc-ai_logo.png"
               alt="Piko Logo"
               width={150}
               height={150}
@@ -84,7 +84,7 @@ export default function LoginPage() {
             <div className="relative mb-4">
               <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#BF092F] to-purple-600 opacity-60 blur-xl"></div>
               <Image
-                src="/piko_logo.png"
+                src="/soc-ai_logo.png"
                 alt="Piko Logo"
                 width={80}
                 height={80}

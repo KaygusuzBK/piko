@@ -1,24 +1,25 @@
 {
-  "name": "piko",
+  "name": "soc-ai",
   "version": "0.1.0",
-  "description": "Modern social app built with Next.js and Supabase",
+  "description": "Modern social AI app built with Next.js and Supabase",
   "keywords": [
     "nextjs",
     "supabase",
     "social",
+    "ai",
     "oauth",
     "typescript",
     "tailwindcss"
   ],
   "author": "KaygusuzBK",
   "license": "MIT",
-  "homepage": "https://github.com/KaygusuzBK/piko#readme",
+  "homepage": "https://github.com/KaygusuzBK/soc-ai#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/KaygusuzBK/piko.git"
+    "url": "https://github.com/KaygusuzBK/soc-ai.git"
   },
   "bugs": {
-    "url": "https://github.com/KaygusuzBK/piko/issues"
+    "url": "https://github.com/KaygusuzBK/soc-ai/issues"
   },
   "scripts": {
     "dev": "next dev --turbopack",

@@ -57,7 +57,7 @@ export default function FavoritesPage() {
           <LeftSidebar />
 
           <div className="lg:col-span-2 h-full min-h-0 overflow-y-auto scrollbar-hide border-x border-border">
-            <div className="sticky top-0 z-10 bg-piko-header/60 backdrop-blur px-3 sm:px-4 py-3">
+            <div className="sticky top-0 z-10 bg-soc-ai-header/60 backdrop-blur px-3 sm:px-4 py-3">
               <h1 className="text-lg sm:text-xl font-semibold text-foreground">Favoriler</h1>
             </div>
 

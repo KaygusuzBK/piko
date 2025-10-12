@@ -27,8 +27,8 @@ export function Header() {
           <div className="relative">
             <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 opacity-60 blur-sm"></div>
             <Image
-              src="/piko_logo.png"
-              alt="Piko Logo"
+              src="/soc-ai_logo.png"
+              alt="SOC-AI Logo"
               width={32}
               height={32}
               className="relative rounded-lg sm:w-8 sm:h-8 z-10"
