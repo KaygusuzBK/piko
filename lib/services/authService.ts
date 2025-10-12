@@ -68,6 +68,17 @@ export class AuthService {
     }
   }
 
+  async resetPassword(email: string) {
+    const { error } = await this.supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    })
+    if (error) {
+      console.error('Password reset error:', error)
+      return { error: error as Error }
+    }
+    return { error: null }
+  }
+
   async getSession() {
     return await this.supabase.auth.getSession()
   }

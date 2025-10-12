@@ -23,6 +23,7 @@ interface LoginFormProps extends React.ComponentProps<"div"> {
   onGoogleLogin?: () => void
   onEmailLogin?: (email: string, password: string) => Promise<{ error: Error | null }>
   onEmailSignup?: (email: string, password: string, displayName: string) => Promise<{ error: Error | null }>
+  onResetPassword?: (email: string) => Promise<{ error: Error | null }>
 }
 
 export function LoginForm({
@@ -31,6 +32,7 @@ export function LoginForm({
   onGoogleLogin,
   onEmailLogin,
   onEmailSignup,
+  onResetPassword,
   ...props
 }: LoginFormProps) {
   const [isSignUp, setIsSignUp] = useState(false)
@@ -40,6 +42,32 @@ export function LoginForm({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [showResetPassword, setShowResetPassword] = useState(false)
+
+  const handleResetPassword = async () => {
+    if (!email.trim()) {
+      setError("Lütfen e-posta adresinizi girin")
+      return
+    }
+    
+    setLoading(true)
+    setError("")
+    setSuccess("")
+
+    try {
+      const result = await onResetPassword?.(email)
+      if (result?.error) {
+        setError(result.error.message || "Şifre sıfırlama başarısız oldu")
+      } else {
+        setSuccess("Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Lütfen e-postanızı kontrol edin.")
+        setShowResetPassword(false)
+      }
+    } catch {
+      setError("Bir hata oluştu. Lütfen tekrar deneyin.")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -161,12 +189,13 @@ export function LoginForm({
                 <div className="flex items-center">
                   <FieldLabel htmlFor="password" className="text-foreground font-medium">Şifre</FieldLabel>
                   {!isSignUp && (
-                    <a
-                      href="#"
+                    <button
+                      type="button"
+                      onClick={() => setShowResetPassword(true)}
                       className="ml-auto text-sm underline-offset-4 hover:underline text-muted-foreground hover:text-[#BF092F] transition-colors duration-200"
                     >
                       Şifrenizi mi unuttunuz?
-                    </a>
+                    </button>
                   )}
                 </div>
                 <Input 
@@ -218,6 +247,45 @@ export function LoginForm({
               </Field>
             </FieldGroup>
           </form>
+          
+          {/* Password Reset Form */}
+          {showResetPassword && (
+            <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/50 rounded-lg">
+              <h3 className="text-lg font-semibold text-blue-600 mb-2">Şifre Sıfırlama</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                E-posta adresinize şifre sıfırlama bağlantısı göndereceğiz.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  onClick={handleResetPassword}
+                  disabled={loading}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Gönderiliyor...
+                    </>
+                  ) : (
+                    "Şifre Sıfırlama Bağlantısı Gönder"
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowResetPassword(false)
+                    setError("")
+                    setSuccess("")
+                  }}
+                  disabled={loading}
+                >
+                  İptal
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
       <FieldDescription className="px-6 text-center text-muted-foreground text-sm">

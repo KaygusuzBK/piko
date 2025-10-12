@@ -13,6 +13,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>
   signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>
   signUpWithEmail: (email: string, password: string, displayName: string) => Promise<{ error: Error | null }>
+  resetPassword: (email: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
 }
 
@@ -59,6 +60,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: null }
   }
 
+  const resetPassword = async (email: string) => {
+    const { error } = await authService.resetPassword(email)
+    if (error) return { error: error as Error }
+    return { error: null }
+  }
+
   const signOut = async () => {
     await authService.signOut()
     useAuthStore.getState().signOut()
@@ -72,6 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signInWithGoogle,
     signInWithEmail,
     signUpWithEmail,
+    resetPassword,
     signOut,
   }
 
