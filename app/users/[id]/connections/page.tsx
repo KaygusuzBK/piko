@@ -1,32 +1,50 @@
 'use client'
 
 import { useAuthStore } from '@/stores/authStore'
-import { useRouter } from 'next/navigation'
-import { useEffect, use as usePromise } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState, use as usePromise } from 'react'
 import { Header } from '@/components/Header'
 import { LeftSidebar } from '@/components/LeftSidebar'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { UserListCard } from '@/components/UserListCard'
-import { useFollowers } from '@/hooks/useFollow'
+import { useFollowers, useFollowing } from '@/hooks/useFollow'
 import { useUserProfile } from '@/hooks/useUserProfile'
 
-interface FollowersPageProps {
+interface ConnectionsPageProps {
   params: Promise<{ id: string }>
 }
 
-export default function FollowersPage({ params }: FollowersPageProps) {
+type TabType = 'followers' | 'following'
+
+export default function ConnectionsPage({ params }: ConnectionsPageProps) {
   const { id: userId } = usePromise(params)
+  const searchParams = useSearchParams()
   const { user, loading: authLoading } = useAuthStore()
   const router = useRouter()
   const { user: profileUser, loading: profileLoading } = useUserProfile(userId)
+  
+  // Get initial tab from URL param, default to 'followers'
+  const initialTab = (searchParams.get('tab') as TabType) || 'followers'
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab)
+
   const { followers, loading: followersLoading } = useFollowers(userId, user?.id, 100)
+  const { following, loading: followingLoading } = useFollowing(userId, user?.id, 100)
 
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login')
     }
   }, [user, authLoading, router])
+
+  // Update URL when tab changes (without page reload)
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab)
+    // Update URL without reloading
+    const url = new URL(window.location.href)
+    url.searchParams.set('tab', tab)
+    window.history.pushState({}, '', url)
+  }
 
   if (authLoading || profileLoading) {
     return (
@@ -39,6 +57,12 @@ export default function FollowersPage({ params }: FollowersPageProps) {
   if (!user || !profileUser) {
     return null
   }
+
+  const currentList = activeTab === 'followers' ? followers : following
+  const currentLoading = activeTab === 'followers' ? followersLoading : followingLoading
+  const emptyMessage = activeTab === 'followers'
+    ? (user.id === userId ? 'Henüz takipçin yok' : 'Bu kullanıcının henüz takipçisi yok')
+    : (user.id === userId ? 'Henüz kimseyi takip etmiyorsun' : 'Bu kullanıcı henüz kimseyi takip etmiyor')
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
@@ -55,7 +79,7 @@ export default function FollowersPage({ params }: FollowersPageProps) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => router.back()}
+                  onClick={() => router.push(`/users/${userId}`)}
                   className="h-8 w-8"
                 >
                   <ArrowLeft className="h-5 w-5" />
@@ -73,40 +97,54 @@ export default function FollowersPage({ params }: FollowersPageProps) {
               {/* Tabs */}
               <div className="flex border-b border-border">
                 <button
-                  onClick={() => router.push(`/users/${userId}/followers`)}
-                  className="flex-1 px-4 py-4 text-center font-semibold border-b-2 border-primary text-foreground"
+                  onClick={() => handleTabChange('followers')}
+                  className={`flex-1 px-4 py-4 text-center font-semibold transition-all duration-200 ${
+                    activeTab === 'followers'
+                      ? 'border-b-2 border-primary text-foreground'
+                      : 'text-muted-foreground hover:bg-accent/50'
+                  }`}
                 >
-                  Takipçiler
+                  <span>Takipçiler</span>
+                  {!followersLoading && (
+                    <span className="ml-1 text-xs opacity-70">
+                      ({followers.length})
+                    </span>
+                  )}
                 </button>
                 <button
-                  onClick={() => router.push(`/users/${userId}/following`)}
-                  className="flex-1 px-4 py-4 text-center text-muted-foreground hover:bg-accent/50 transition-colors"
+                  onClick={() => handleTabChange('following')}
+                  className={`flex-1 px-4 py-4 text-center font-semibold transition-all duration-200 ${
+                    activeTab === 'following'
+                      ? 'border-b-2 border-primary text-foreground'
+                      : 'text-muted-foreground hover:bg-accent/50'
+                  }`}
                 >
-                  Takip Edilenler
+                  <span>Takip Edilenler</span>
+                  {!followingLoading && (
+                    <span className="ml-1 text-xs opacity-70">
+                      ({following.length})
+                    </span>
+                  )}
                 </button>
               </div>
             </div>
 
             {/* Content */}
             <div className="pb-20">
-              {followersLoading ? (
+              {currentLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
-              ) : followers.length === 0 ? (
+              ) : currentList.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-muted-foreground">
-                    {user.id === userId
-                      ? 'Henüz takipçin yok'
-                      : 'Bu kullanıcının henüz takipçisi yok'}
-                  </p>
+                  <p className="text-muted-foreground">{emptyMessage}</p>
                 </div>
               ) : (
-                <div>
-                  {followers.map((follower) => (
+                <div className="animate-in fade-in duration-200">
+                  {currentList.map((listUser) => (
                     <UserListCard
-                      key={follower.id}
-                      user={follower}
+                      key={listUser.id}
+                      user={listUser}
                       currentUserId={user.id}
                     />
                   ))}

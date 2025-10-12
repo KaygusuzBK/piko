@@ -32,11 +32,11 @@ export function ProfileHeader({ user, isOwner, isCompact, currentUserId, onBanne
   }
 
   const handleFollowingClick = () => {
-    router.push(`/users/${user.id}/following`)
+    router.push(`/users/${user.id}/connections?tab=following`)
   }
 
   const handleFollowersClick = () => {
-    router.push(`/users/${user.id}/followers`)
+    router.push(`/users/${user.id}/connections?tab=followers`)
   }
 
   return (
