@@ -1,13 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import { useAuthStore } from '@/stores/authStore'
 import { createPost, CreatePostData } from '@/lib/posts'
-import { Send, Image as ImageIcon, Zap } from 'lucide-react'
+import { uploadPostImage, validateImageFile } from '@/lib/utils/imageUpload'
+import { Send, Image as ImageIcon, Zap, X } from 'lucide-react'
+import Image from 'next/image'
 
 interface CreatePostProps {
   onPostCreated?: () => void
@@ -19,18 +21,61 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
   const [content, setContent] = useState('')
   const [isPosting, setIsPosting] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Debug için
   console.log('CreatePost isCompact:', isCompact, 'isFocused:', isFocused)
 
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate image
+    const error = validateImageFile(file)
+    if (error) {
+      setUploadError(error)
+      return
+    }
+
+    setUploadError(null)
+    setSelectedImage(file)
+
+    // Create preview
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null)
+    setImagePreview(null)
+    setUploadError(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
   const handlePost = async () => {
-    if (!content.trim() || !user) return
+    if ((!content.trim() && !selectedImage) || !user) return
 
     setIsPosting(true)
     try {
+      let imageUrl: string | undefined
+
+      // Upload image if selected
+      if (selectedImage) {
+        imageUrl = await uploadPostImage(user.id, selectedImage) || undefined
+      }
+
       const postData: CreatePostData = {
         content: content.trim(),
+        image_url: imageUrl,
         author_id: user.id
       }
       
@@ -38,6 +83,7 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
       
       if (newPost) {
         setContent('')
+        handleRemoveImage()
         onPostCreated?.()
         console.log('Post created successfully:', newPost)
       } else {
@@ -167,9 +213,48 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
                   maxLength={280}
                 />
                 
+                {/* Image Preview */}
+                {imagePreview && (
+                  <div className="relative w-full mb-2">
+                    <div className="relative w-full h-48 rounded-lg overflow-hidden border border-border">
+                      <Image
+                        src={imagePreview}
+                        alt="Preview"
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <Button
+                      onClick={handleRemoveImage}
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 h-6 w-6 rounded-full"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+
+                {/* Error Message */}
+                {uploadError && (
+                  <p className="text-xs text-red-500 mb-2">{uploadError}</p>
+                )}
+
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-1 sm:space-x-2">
-                    <Button variant="ghost" size="icon" className="group h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white active:text-pink-500 dark:active:text-pink-400 transition-all duration-200 hover:scale-110">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      className="hidden"
+                    />
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="group h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white active:text-pink-500 dark:active:text-pink-400 transition-all duration-200 hover:scale-110"
+                    >
                       <ImageIcon className="h-3 w-3 transition-transform duration-200 hover:rotate-12 group-active:text-pink-500 dark:group-active:text-pink-400" aria-hidden="true" />
                       <span className="sr-only">Resim ekle</span>
                     </Button>
@@ -186,7 +271,7 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
                     <Separator orientation="vertical" className="h-2 sm:h-3" />
                     <Button
                       onClick={handlePost}
-                      disabled={!content.trim() || isPosting || content.length > 280}
+                      disabled={(!content.trim() && !selectedImage) || isPosting || content.length > 280}
                       size="sm"
                       className="px-2 sm:px-3 text-xs h-6 sm:h-7 bg-primary hover:bg-primary/90 text-primary-foreground font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105"
                     >

@@ -7,6 +7,7 @@ import { PostWithAuthor } from '@/lib/types'
 import { PostHeader } from './post/PostHeader'
 import { PostContent } from './post/PostContent'
 import { PostActions } from './post/PostActions'
+import Image from 'next/image'
 
 interface PostCardProps {
   post: PostWithAuthor
@@ -131,6 +132,21 @@ export function PostCard({
             />
 
             <PostContent content={post.content} />
+
+            {/* Post Image */}
+            {post.image_url && (
+              <div className="relative w-full mt-2 rounded-lg overflow-hidden border border-border/50">
+                <div className="relative w-full" style={{ aspectRatio: '16/9' }}>
+                  <Image
+                    src={post.image_url}
+                    alt="Post image"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  />
+                </div>
+              </div>
+            )}
 
             <PostActions
               commentsCount={post.comments_count}

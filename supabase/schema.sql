@@ -50,6 +50,7 @@ END $$;
 CREATE TABLE IF NOT EXISTS posts (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   content TEXT NOT NULL CHECK (char_length(content) <= 280),
+  image_url TEXT,
   author_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -57,6 +58,9 @@ CREATE TABLE IF NOT EXISTS posts (
   comments_count INTEGER DEFAULT 0 CHECK (comments_count >= 0),
   retweets_count INTEGER DEFAULT 0 CHECK (retweets_count >= 0)
 );
+
+-- Add image_url column if it doesn't exist (for existing tables)
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS image_url TEXT;
 
 -- 4. Post interactions tablosu (beğeni, retweet, bookmark)
 CREATE TABLE IF NOT EXISTS post_interactions (
@@ -76,7 +80,7 @@ CREATE INDEX IF NOT EXISTS idx_post_interactions_post_id ON post_interactions(po
 CREATE INDEX IF NOT EXISTS idx_post_interactions_user_type ON post_interactions(user_id, type);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON public.users(username) WHERE username IS NOT NULL;
 
--- 5.1 Storage buckets for user images
+-- 5.1 Storage buckets for user images and post images
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'avatars') THEN
@@ -84,6 +88,9 @@ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'banners') THEN
     INSERT INTO storage.buckets (id, name, public) VALUES ('banners', 'banners', true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'post-images') THEN
+    INSERT INTO storage.buckets (id, name, public) VALUES ('post-images', 'post-images', true);
   END IF;
 END $$;
 
@@ -101,11 +108,13 @@ DO $$
 BEGIN
   DROP POLICY IF EXISTS "Public read avatars" ON storage.objects;
   DROP POLICY IF EXISTS "Public read banners" ON storage.objects;
+  DROP POLICY IF EXISTS "Public read post images" ON storage.objects;
   DROP POLICY IF EXISTS "Users manage own avatar objects" ON storage.objects;
   DROP POLICY IF EXISTS "Users manage own banner objects" ON storage.objects;
+  DROP POLICY IF EXISTS "Users manage own post images" ON storage.objects;
 END $$;
 
--- Public read for avatars and banners
+-- Public read for avatars, banners and post images
 CREATE POLICY "Public read avatars" ON storage.objects
   FOR SELECT TO public
   USING (bucket_id = 'avatars');
@@ -113,6 +122,10 @@ CREATE POLICY "Public read avatars" ON storage.objects
 CREATE POLICY "Public read banners" ON storage.objects
   FOR SELECT TO public
   USING (bucket_id = 'banners');
+
+CREATE POLICY "Public read post images" ON storage.objects
+  FOR SELECT TO public
+  USING (bucket_id = 'post-images');
 
 -- Helpers: users can write only to their own folder: <uid>/...
 -- This uses split_part(name,'/',1) to compare the folder prefix
@@ -132,6 +145,15 @@ CREATE POLICY "Users manage own banner objects" ON storage.objects
   )
   WITH CHECK (
     bucket_id = 'banners' AND split_part(name, '/', 1) = auth.uid()::text
+  );
+
+CREATE POLICY "Users manage own post images" ON storage.objects
+  FOR ALL TO authenticated
+  USING (
+    bucket_id = 'post-images' AND split_part(name, '/', 1) = auth.uid()::text
+  )
+  WITH CHECK (
+    bucket_id = 'post-images' AND split_part(name, '/', 1) = auth.uid()::text
   );
 
 -- Eski profiles politikalarını kaldır (eğer varsa)
