@@ -36,7 +36,8 @@ export function ShareMenu({ postId, postContent }: ShareMenuProps) {
     ? postContent.substring(0, 100) + '...' 
     : postContent
 
-  const handleCopyLink = async () => {
+  const handleCopyLink = async (e: React.MouseEvent) => {
+    e.stopPropagation()
     try {
       await navigator.clipboard.writeText(postUrl)
       setCopied(true)
@@ -46,33 +47,39 @@ export function ShareMenu({ postId, postContent }: ShareMenuProps) {
     }
   }
 
-  const handleShareTwitter = () => {
+  const handleShareTwitter = (e: React.MouseEvent) => {
+    e.stopPropagation()
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(postUrl)}`
     window.open(url, '_blank', 'width=550,height=420')
   }
 
-  const handleShareFacebook = () => {
+  const handleShareFacebook = (e: React.MouseEvent) => {
+    e.stopPropagation()
     const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}`
     window.open(url, '_blank', 'width=550,height=420')
   }
 
-  const handleShareLinkedIn = () => {
+  const handleShareLinkedIn = (e: React.MouseEvent) => {
+    e.stopPropagation()
     const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(postUrl)}`
     window.open(url, '_blank', 'width=550,height=420')
   }
 
-  const handleShareWhatsApp = () => {
+  const handleShareWhatsApp = (e: React.MouseEvent) => {
+    e.stopPropagation()
     const url = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + postUrl)}`
     window.open(url, '_blank')
   }
 
-  const handleShareEmail = () => {
+  const handleShareEmail = (e: React.MouseEvent) => {
+    e.stopPropagation()
     const subject = 'SOC-AI Gönderisi'
     const body = `${shareText}\n\n${postUrl}`
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
   }
 
-  const handleShareNative = async () => {
+  const handleShareNative = async (e: React.MouseEvent) => {
+    e.stopPropagation()
     if (navigator.share) {
       try {
         await navigator.share({

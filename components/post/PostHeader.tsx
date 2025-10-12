@@ -44,13 +44,25 @@ export function PostHeader({ author, createdAt, canDelete, onDelete }: PostHeade
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem>Paylaş</DropdownMenuItem>
-          <DropdownMenuItem>Kopyala</DropdownMenuItem>
-          <DropdownMenuItem className="text-red-500">Şikayet et</DropdownMenuItem>
+          <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+            Paylaş
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+            Kopyala
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            className="text-red-500"
+            onClick={(e) => e.stopPropagation()}
+          >
+            Şikayet et
+          </DropdownMenuItem>
           {canDelete && (
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
-              onClick={onDelete}
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete?.()
+              }}
             >
               Sil
             </DropdownMenuItem>

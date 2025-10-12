@@ -93,6 +93,7 @@ export function AISuggestions({ onSuggestionSelect, currentContent }: AISuggesti
           variant="ghost"
           size="icon"
           disabled={loading}
+          onClick={(e) => e.stopPropagation()}
           className="h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white transition-all duration-200 hover:scale-110"
         >
           {loading ? (
@@ -110,7 +111,10 @@ export function AISuggestions({ onSuggestionSelect, currentContent }: AISuggesti
         {SUGGESTION_PROMPTS.map((item) => (
           <DropdownMenuItem
             key={item.label}
-            onClick={() => generateSuggestion(item.prompt)}
+            onClick={(e) => {
+              e.stopPropagation()
+              generateSuggestion(item.prompt)
+            }}
             disabled={loading}
             className="cursor-pointer"
           >

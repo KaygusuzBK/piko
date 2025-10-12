@@ -31,6 +31,7 @@ export function EmojiPicker({ onEmojiSelect }: EmojiPickerProps) {
         <Button
           variant="ghost"
           size="icon"
+          onClick={(e) => e.stopPropagation()}
           className="h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white transition-all duration-200 hover:scale-110"
         >
           <Smile className="h-3 w-3 transition-transform duration-200 hover:scale-125" />
@@ -43,7 +44,10 @@ export function EmojiPicker({ onEmojiSelect }: EmojiPickerProps) {
           {Object.keys(EMOJI_CATEGORIES).map((category) => (
             <button
               key={category}
-              onClick={() => setActiveCategory(category)}
+              onClick={(e) => {
+                e.stopPropagation()
+                setActiveCategory(category)
+              }}
               className={`px-2 py-1 text-xs rounded-md whitespace-nowrap transition-colors ${
                 activeCategory === category
                   ? 'bg-primary text-primary-foreground'
@@ -60,7 +64,10 @@ export function EmojiPicker({ onEmojiSelect }: EmojiPickerProps) {
           {EMOJI_CATEGORIES[activeCategory as keyof typeof EMOJI_CATEGORIES].map((emoji, index) => (
             <button
               key={index}
-              onClick={() => onEmojiSelect(emoji)}
+              onClick={(e) => {
+                e.stopPropagation()
+                onEmojiSelect(emoji)
+              }}
               className="text-2xl hover:bg-muted rounded p-1 transition-all duration-200 hover:scale-125"
             >
               {emoji}

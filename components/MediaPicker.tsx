@@ -76,6 +76,7 @@ export function MediaPicker({ onMediaSelect, disabled }: MediaPickerProps) {
             variant="ghost"
             size="icon"
             disabled={disabled}
+            onClick={(e) => e.stopPropagation()}
             className="group h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white active:text-pink-500 dark:active:text-pink-400 disabled:opacity-50 transition-all duration-200 hover:scale-110"
           >
             <Film className="h-3 w-3 group-active:text-pink-500 dark:group-active:text-pink-400 transition-transform duration-200 hover:scale-125" />
@@ -84,21 +85,30 @@ export function MediaPicker({ onMediaSelect, disabled }: MediaPickerProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-48">
           <DropdownMenuItem
-            onClick={() => imageInputRef.current?.click()}
+            onClick={(e) => {
+              e.stopPropagation()
+              imageInputRef.current?.click()
+            }}
             className="cursor-pointer"
           >
             <ImageIcon className="mr-2 h-4 w-4" />
             <span>Resim Ekle</span>
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={() => videoInputRef.current?.click()}
+            onClick={(e) => {
+              e.stopPropagation()
+              videoInputRef.current?.click()
+            }}
             className="cursor-pointer"
           >
             <FileVideo className="mr-2 h-4 w-4" />
             <span>Video Ekle</span>
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={() => gifInputRef.current?.click()}
+            onClick={(e) => {
+              e.stopPropagation()
+              gifInputRef.current?.click()
+            }}
             className="cursor-pointer"
           >
             <Film className="mr-2 h-4 w-4" />
