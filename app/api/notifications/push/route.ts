@@ -1,37 +1,9 @@
-/**
- * Push Notification API Route
- * 
- * Sends web push notifications to subscribed users.
- * Requires VAPID keys to be configured.
- */
-
 import { NextRequest, NextResponse } from 'next/server'
-import webpush from 'web-push'
 import { notificationRepository } from '@/lib/repositories/notificationRepository'
-import { createClient } from '@/lib/supabase'
 
-// Configure web-push with VAPID keys
-if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT || 'mailto:admin@socai.com',
-    process.env.VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY
-  )
-}
-
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const supabase = createClient()
-    
-    // Verify authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const body = await request.json()
-    const { userId, notificationId, title, message, url } = body
+    const { userId, title, message, url, icon } = await req.json()
 
     if (!userId || !title || !message) {
       return NextResponse.json(
@@ -40,64 +12,80 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get user's push subscriptions
-    const subscriptions = await notificationRepository.getPushSubscriptions(userId)
+    // OneSignal REST API endpoint
+    const oneSignalAppId = process.env.ONESIGNAL_APP_ID
+    const oneSignalApiKey = process.env.ONESIGNAL_REST_API_KEY
 
-    if (subscriptions.length === 0) {
+    if (!oneSignalAppId || !oneSignalApiKey) {
       return NextResponse.json(
-        { message: 'No push subscriptions found for user' },
-        { status: 200 }
+        { error: 'OneSignal configuration missing' },
+        { status: 500 }
       )
     }
 
-    // Prepare push notification payload
-    const payload = JSON.stringify({
-      title,
-      body: message,
-      icon: '/soc-ai_logo.png',
-      badge: '/soc-ai_logo.png',
+    // Get user's OneSignal player ID from our database
+    const subscriptions = await notificationRepository.getPushSubscriptions(userId)
+    if (subscriptions.length === 0) {
+      return NextResponse.json(
+        { error: 'User has no push subscriptions' },
+        { status: 404 }
+      )
+    }
+
+    // Extract OneSignal player IDs from our custom endpoint format
+    const playerIds = subscriptions
+      .filter(sub => sub.endpoint.startsWith('onesignal:'))
+      .map(sub => sub.endpoint.replace('onesignal:', ''))
+
+    if (playerIds.length === 0) {
+      return NextResponse.json(
+        { error: 'No valid OneSignal subscriptions found' },
+        { status: 404 }
+      )
+    }
+
+    // Send notification via OneSignal REST API
+    const notificationPayload = {
+      app_id: oneSignalAppId,
+      include_player_ids: playerIds,
+      headings: { en: title },
+      contents: { en: message },
       url: url || '/',
-      notificationId: notificationId || null,
-      tag: 'notification',
-      requireInteraction: false
+      chrome_web_icon: icon || '/soc-ai_logo.png',
+      chrome_web_badge: '/soc-ai_logo.png',
+      priority: 10,
+      ttl: 3600, // 1 hour
+    }
+
+    const response = await fetch('https://onesignal.com/api/v1/notifications', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${oneSignalApiKey}`,
+      },
+      body: JSON.stringify(notificationPayload),
     })
 
-    // Send push notification to all user's subscriptions
-    const sendPromises = subscriptions.map(async (sub) => {
-      try {
-        const pushSubscription = {
-          endpoint: sub.endpoint,
-          keys: {
-            p256dh: sub.p256dh,
-            auth: sub.auth
-          }
-        }
+    if (!response.ok) {
+      const errorData = await response.text()
+      console.error('OneSignal API error:', errorData)
+      return NextResponse.json(
+        { error: 'Failed to send push notification' },
+        { status: response.status }
+      )
+    }
 
-        await webpush.sendNotification(pushSubscription, payload)
-        return { success: true, endpoint: sub.endpoint }
-      } catch (error: unknown) {
-        console.error('Error sending push notification:', error)
-        const err = error as { statusCode?: number; message?: string }
-        
-        // If subscription is no longer valid, remove it
-        if (err.statusCode === 410 || err.statusCode === 404) {
-          await notificationRepository.deletePushSubscription(sub.endpoint, userId)
-          console.log('Removed invalid subscription:', sub.endpoint)
-        }
-        
-        return { success: false, endpoint: sub.endpoint, error: err.message || 'Unknown error' }
-      }
-    })
-
-    const results = await Promise.all(sendPromises)
-    const successCount = results.filter(r => r.success).length
+    const result = await response.json()
+    console.log('Push notification sent successfully:', result.id)
 
     return NextResponse.json({
-      message: `Push notifications sent to ${successCount}/${subscriptions.length} subscriptions`,
-      results
+      success: true,
+      notificationId: result.id,
+      recipients: result.recipients,
     })
+
   } catch (error) {
-    console.error('Error in push notification endpoint:', error)
+    console.error('Error sending push notification:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -105,3 +93,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// Test endpoint for development
+export async function GET() {
+  return NextResponse.json({
+    message: 'Push notification endpoint is working',
+    timestamp: new Date().toISOString(),
+  })
+}

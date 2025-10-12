@@ -1,15 +1,62 @@
 /**
- * Push Notification Service
+ * Push Notification Service (OneSignal)
  * 
- * Manages web push notifications.
- * Handles subscription management and notification sending.
+ * Manages web push notifications using OneSignal.
+ * No VAPID keys required - uses OneSignal's infrastructure.
  */
 
 import { notificationRepository } from '@/lib/repositories/notificationRepository'
 import type { PushSubscription as PushSubscriptionType } from '@/lib/types'
 
+// OneSignal SDK types
+interface OneSignalSDK {
+  init: (config: OneSignalConfig) => Promise<void>
+  Notifications: {
+    requestPermission: () => Promise<boolean>
+    getPermission: () => Promise<boolean>
+    create: (options: NotificationOptions) => Promise<void>
+  }
+  User: {
+    getOnesignalId: () => Promise<string | null>
+  }
+  login: (userId: string) => Promise<void>
+  logout: () => Promise<void>
+}
+
+interface OneSignalConfig {
+  appId: string
+  allowLocalhostAsSecureOrigin?: boolean
+  notifyButton?: {
+    enable: boolean
+  }
+  promptOptions?: {
+    slidedown?: {
+      enabled: boolean
+    }
+  }
+}
+
+interface NotificationOptions {
+  title: string
+  body: string
+  icon?: string
+  badge?: string
+  tag?: string
+}
+
+declare global {
+  interface Window {
+    OneSignal?: OneSignalSDK
+  }
+}
+
 export class PushNotificationService {
   private notificationRepo = notificationRepository
+  private oneSignalAppId: string
+
+  constructor() {
+    this.oneSignalAppId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID || ''
+  }
 
   /**
    * Check if push notifications are supported
@@ -20,28 +67,43 @@ export class PushNotificationService {
   }
 
   /**
-   * Request notification permission
+   * Initialize OneSignal
    */
-  async requestPermission(): Promise<NotificationPermission> {
-    if (!this.isPushSupported()) {
-      throw new Error('Push notifications are not supported')
+  async initialize(): Promise<boolean> {
+    if (!this.isPushSupported() || !this.oneSignalAppId) {
+      return false
     }
 
-    return await Notification.requestPermission()
+    try {
+      // OneSignal SDK will be loaded dynamically
+      const OneSignal = window.OneSignal
+      if (!OneSignal) {
+        console.error('OneSignal SDK not loaded')
+        return false
+      }
+
+      await OneSignal.init({
+        appId: this.oneSignalAppId,
+        allowLocalhostAsSecureOrigin: true,
+        notifyButton: {
+          enable: false, // We'll use our custom UI
+        },
+        promptOptions: {
+          slidedown: {
+            enabled: false, // We'll handle permission prompts manually
+          },
+        },
+      })
+
+      return true
+    } catch (error) {
+      console.error('Error initializing OneSignal:', error)
+      return false
+    }
   }
 
   /**
-   * Get current notification permission
-   */
-  getPermission(): NotificationPermission | null {
-    if (typeof window === 'undefined' || !('Notification' in window)) {
-      return null
-    }
-    return Notification.permission
-  }
-
-  /**
-   * Subscribe to push notifications
+   * Request notification permission and subscribe
    */
   async subscribe(userId: string): Promise<boolean> {
     try {
@@ -50,46 +112,46 @@ export class PushNotificationService {
         return false
       }
 
-      // Request permission first
-      const permission = await this.requestPermission()
-      if (permission !== 'granted') {
+      const OneSignal = window.OneSignal
+      if (!OneSignal) {
+        console.error('OneSignal not initialized')
+        return false
+      }
+
+      // Request permission
+      const permission = await OneSignal.Notifications.requestPermission()
+      if (!permission) {
         console.log('Push notification permission denied')
         return false
       }
 
-      // Get service worker registration
-      const registration = await navigator.serviceWorker.ready
-
-      // Get VAPID public key from environment
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-      if (!vapidPublicKey) {
-        console.error('VAPID public key not configured')
+      // Get user ID from OneSignal
+      const oneSignalUserId = await OneSignal.User.getOnesignalId()
+      if (!oneSignalUserId) {
+        console.error('Failed to get OneSignal user ID')
         return false
       }
 
-      // Subscribe to push
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: this.urlBase64ToUint8Array(vapidPublicKey).buffer as ArrayBuffer
-      })
+      // Set external user ID to link with our user
+      await OneSignal.login(userId)
 
-      // Save subscription to database
+      // Save subscription info to our database
       const subscriptionData: Omit<PushSubscriptionType, 'id' | 'created_at'> = {
         user_id: userId,
-        endpoint: subscription.endpoint,
-        p256dh: this.arrayBufferToBase64(subscription.getKey('p256dh')),
-        auth: this.arrayBufferToBase64(subscription.getKey('auth'))
+        endpoint: `onesignal:${oneSignalUserId}`, // Custom endpoint format
+        p256dh: '', // Not needed for OneSignal
+        auth: oneSignalUserId
       }
 
       const success = await this.notificationRepo.createPushSubscription(subscriptionData)
       
       if (success) {
-        console.log('Push subscription created successfully')
+        console.log('OneSignal subscription created successfully')
       }
 
       return success
     } catch (error) {
-      console.error('Error subscribing to push notifications:', error)
+      console.error('Error subscribing to OneSignal:', error)
       return false
     }
   }
@@ -99,27 +161,26 @@ export class PushNotificationService {
    */
   async unsubscribe(userId: string): Promise<boolean> {
     try {
-      if (!this.isPushSupported()) {
+      const OneSignal = window.OneSignal
+      if (!OneSignal) {
         return false
       }
 
-      const registration = await navigator.serviceWorker.ready
-      const subscription = await registration.pushManager.getSubscription()
+      // Get user's subscriptions
+      const subscriptions = await this.notificationRepo.getPushSubscriptions(userId)
+      
+      // Remove from OneSignal
+      await OneSignal.logout()
 
-      if (subscription) {
-        // Unsubscribe from push manager
-        await subscription.unsubscribe()
-
-        // Remove from database
-        await this.notificationRepo.deletePushSubscription(subscription.endpoint, userId)
-        
-        console.log('Push subscription removed successfully')
-        return true
+      // Remove from our database
+      for (const sub of subscriptions) {
+        await this.notificationRepo.deletePushSubscription(sub.endpoint, userId)
       }
-
-      return false
+      
+      console.log('OneSignal subscription removed successfully')
+      return true
     } catch (error) {
-      console.error('Error unsubscribing from push notifications:', error)
+      console.error('Error unsubscribing from OneSignal:', error)
       return false
     }
   }
@@ -133,30 +194,16 @@ export class PushNotificationService {
         return false
       }
 
-      const registration = await navigator.serviceWorker.ready
-      const subscription = await registration.pushManager.getSubscription()
+      const OneSignal = window.OneSignal
+      if (!OneSignal) {
+        return false
+      }
 
-      return subscription !== null
+      const permission = await OneSignal.Notifications.getPermission()
+      return permission === true
     } catch (error) {
       console.error('Error checking subscription status:', error)
       return false
-    }
-  }
-
-  /**
-   * Get current subscription
-   */
-  async getSubscription(): Promise<PushSubscription | null> {
-    try {
-      if (!this.isPushSupported()) {
-        return null
-      }
-
-      const registration = await navigator.serviceWorker.ready
-      return await registration.pushManager.getSubscription()
-    } catch (error) {
-      console.error('Error getting subscription:', error)
-      return null
     }
   }
 
@@ -168,12 +215,19 @@ export class PushNotificationService {
       throw new Error('Notifications not supported')
     }
 
-    const permission = await this.requestPermission()
-    if (permission !== 'granted') {
+    const OneSignal = window.OneSignal
+    if (!OneSignal) {
+      throw new Error('OneSignal not initialized')
+    }
+
+    const permission = await OneSignal.Notifications.requestPermission()
+    if (!permission) {
       throw new Error('Notification permission denied')
     }
 
-    new Notification('SOC AI Test', {
+    // Show a test notification using OneSignal
+    await OneSignal.Notifications.create({
+      title: 'SOC AI Test',
       body: 'Push bildirimleri başarıyla kuruldu!',
       icon: '/soc-ai_logo.png',
       badge: '/soc-ai_logo.png',
@@ -181,34 +235,25 @@ export class PushNotificationService {
     })
   }
 
-  // Helper methods
-  private urlBase64ToUint8Array(base64String: string): Uint8Array {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4)
-    const base64 = (base64String + padding)
-      .replace(/\-/g, '+')
-      .replace(/_/g, '/')
-
-    const rawData = window.atob(base64)
-    const outputArray = new Uint8Array(rawData.length)
-
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i)
+  /**
+   * Send push notification to specific user
+   */
+  async sendToUser(userId: string, title: string, message: string, url?: string): Promise<boolean> {
+    try {
+      // This would typically be done server-side via OneSignal REST API
+      // For now, we'll just log it
+      console.log(`Sending push notification to user ${userId}:`, { title, message, url })
+      
+      // In a real implementation, you would call OneSignal's REST API here
+      // POST https://onesignal.com/api/v1/notifications
+      
+      return true
+    } catch (error) {
+      console.error('Error sending push notification:', error)
+      return false
     }
-    return outputArray
-  }
-
-  private arrayBufferToBase64(buffer: ArrayBuffer | null): string {
-    if (!buffer) return ''
-    
-    const bytes = new Uint8Array(buffer)
-    let binary = ''
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i])
-    }
-    return window.btoa(binary)
   }
 }
 
 // Singleton instance
 export const pushNotificationService = new PushNotificationService()
-

@@ -1,8 +1,8 @@
 /**
- * PushSubscriptionBanner Component
+ * PushSubscriptionBanner Component (OneSignal)
  * 
  * Banner to request push notification permission from users.
- * Shows only if not already subscribed and permission not denied.
+ * Uses OneSignal instead of VAPID.
  */
 
 'use client'
@@ -34,29 +34,33 @@ export function PushSubscriptionBanner() {
         return
       }
 
-      // Don't show if permission is denied
-      const permission = pushNotificationService.getPermission()
-      if (permission === 'denied') {
-        setShow(false)
-        return
-      }
+      // Wait for OneSignal to load
+      const checkOneSignal = () => {
+        const OneSignal = window.OneSignal
+        if (OneSignal) {
+          OneSignal.Notifications.getPermission().then((permission: boolean) => {
+            if (permission) {
+              setShow(false)
+              return
+            }
 
-      // Don't show if already subscribed
-      const isSubscribed = await pushNotificationService.isSubscribed()
-      if (isSubscribed) {
-        setShow(false)
-        return
-      }
+            // Check if user dismissed the banner
+            const dismissed = localStorage.getItem('push-banner-dismissed')
+            if (dismissed === 'true') {
+              setShow(false)
+              return
+            }
 
-      // Check if user dismissed the banner
-      const dismissed = localStorage.getItem('push-banner-dismissed')
-      if (dismissed === 'true') {
-        setShow(false)
-        return
+            // Show the banner
+            setShow(true)
+          })
+        } else {
+          // Retry after 1 second if OneSignal not loaded yet
+          setTimeout(checkOneSignal, 1000)
+        }
       }
-
-      // Show the banner
-      setShow(true)
+      
+      checkOneSignal()
     }
 
     checkSubscription()
@@ -143,4 +147,3 @@ export function PushSubscriptionBanner() {
     </div>
   )
 }
-

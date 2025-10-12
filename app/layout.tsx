@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Toaster } from "sonner";
+import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -49,6 +50,13 @@ export default function RootLayout({
             {children}
           </AuthProvider>
           <Toaster position="top-right" richColors closeButton />
+          
+          {/* OneSignal SDK */}
+          <Script
+            src="https://cdn.onesignal.com/sdks/OneSignalSDK.js"
+            strategy="afterInteractive"
+          />
+          
           <Analytics />
           <SpeedInsights />
         </ThemeProvider>
