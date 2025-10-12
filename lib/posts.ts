@@ -35,6 +35,10 @@ export async function getUserFavoritePosts(userId: string, limit: number = 20, o
   return postQueryService.getUserFavoritePosts(userId, limit, offset, viewerUserId)
 }
 
+export async function getPostById(postId: string, viewerUserId?: string): Promise<PostWithAuthor | null> {
+  return postQueryService.getPostById(postId, viewerUserId)
+}
+
 // Interaction operations
 export async function toggleLike(postId: string, userId: string): Promise<boolean> {
   return postInteractionService.toggleLike(postId, userId)

@@ -53,6 +53,37 @@ export class PostRepository {
     }
   }
 
+  async fetchPostById(postId: string) {
+    try {
+      const { data, error } = await this.supabase
+        .from('posts')
+        .select(`
+          *,
+          author:users!posts_author_id_fkey (
+            id,
+            username,
+            avatar_url,
+            name
+          ),
+          user_interactions:post_interactions!left (
+            type,
+            user_id
+          )
+        `)
+        .eq('id', postId)
+
+      if (error) {
+        console.error('Error fetching post by id:', error)
+        return []
+      }
+
+      return data || []
+    } catch (error) {
+      console.error('Error fetching post by id:', error)
+      return []
+    }
+  }
+
   async fetchPosts(filters: PostQueryFilters) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
