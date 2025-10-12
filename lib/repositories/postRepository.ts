@@ -12,6 +12,8 @@ export class PostRepository {
         .insert([{
           content: data.content,
           author_id: data.author_id,
+          image_url: data.image_url,
+          type: data.type || 'text',
           likes_count: 0,
           comments_count: 0,
           retweets_count: 0

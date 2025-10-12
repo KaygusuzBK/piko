@@ -70,7 +70,9 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
 
       // Upload image if selected
       if (selectedImage) {
+        console.log('Uploading image...', selectedImage.name)
         imageUrl = await uploadPostImage(user.id, selectedImage) || undefined
+        console.log('Image uploaded, URL:', imageUrl)
       }
 
       const postData: CreatePostData = {
@@ -80,6 +82,7 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
         author_id: user.id
       }
       
+      console.log('Creating post with data:', postData)
       const newPost = await createPost(postData)
       
       if (newPost) {
