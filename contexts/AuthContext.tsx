@@ -1,9 +1,9 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect } from 'react'
 import { User, Session } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
+import { authService } from '@/lib/services/authService'
 
 interface AuthContextType {
   user: User | null
@@ -23,18 +23,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    authService.getSession().then(({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
     })
 
     // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
+    const { data: { subscription } } = authService.onAuthStateChange((_event, session) => {
+      setSession(session as Session | null)
+      setUser((session as Session | null)?.user ?? null)
       setLoading(false)
     })
 
@@ -42,77 +40,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [setUser, setSession, setLoading])
 
   const signInWithGitHub = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'github',
-      options: {
-        redirectTo: `${window.location.origin}/`,
-      },
-    })
-    if (error) console.error('GitHub login error:', error)
+    await authService.signInWithGitHub()
   }
 
   const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/`,
-      },
-    })
-    if (error) console.error('Google login error:', error)
+    await authService.signInWithGoogle()
   }
 
   const signInWithEmail = async (email: string, password: string) => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-      if (error) {
-        console.error('Email login error:', error)
-        return { error: error as Error }
-      }
-      setSession(data.session)
-      setUser(data.user)
-      return { error: null }
-    } catch (error) {
-      console.error('Email login error:', error)
-      return { error: error as Error }
-    }
+    const { error } = await authService.signInWithEmail(email, password)
+    if (error) return { error: error as Error }
+    return { error: null }
   }
 
   const signUpWithEmail = async (email: string, password: string, displayName: string) => {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            name: displayName,
-            display_name: displayName,
-          },
-        },
-      })
-      if (error) {
-        console.error('Email signup error:', error)
-        return { error: error as Error }
-      }
-      // If email confirmation is required, user will get an email
-      // Otherwise, they'll be logged in automatically
-      if (data.session) {
-        setSession(data.session)
-        setUser(data.user)
-      }
-      return { error: null }
-    } catch (error) {
-      console.error('Email signup error:', error)
-      return { error: error as Error }
-    }
+    const { error } = await authService.signUpWithEmail(email, password, displayName)
+    if (error) return { error: error as Error }
+    return { error: null }
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) console.error('Sign out error:', error)
+    await authService.signOut()
     useAuthStore.getState().signOut()
   }
 
@@ -137,3 +85,4 @@ export function useAuth() {
   }
   return context
 }
+
