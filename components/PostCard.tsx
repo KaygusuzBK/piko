@@ -8,6 +8,8 @@ import { PostWithAuthor } from '@/lib/types'
 import { PostHeader } from './post/PostHeader'
 import { PostContent } from './post/PostContent'
 import { PostActions } from './post/PostActions'
+import { useNotificationStore } from '@/stores/notificationStore'
+import { useAuthStore } from '@/stores/authStore'
 import Image from 'next/image'
 
 interface PostCardProps {
@@ -32,6 +34,8 @@ export function PostCard({
   disableNavigation = false
 }: PostCardProps) {
   const router = useRouter()
+  const { user } = useAuthStore()
+  const { addNotification } = useNotificationStore()
   const [isLiked, setIsLiked] = useState(post.user_interaction_status?.isLiked || false)
   const [isRetweeted, setIsRetweeted] = useState(post.user_interaction_status?.isRetweeted || false)
   const [isBookmarked, setIsBookmarked] = useState(post.user_interaction_status?.isBookmarked || false)
@@ -63,6 +67,18 @@ export function PostCard({
 
     try {
       await onLike?.(post.id)
+      
+      // Add notification if user liked someone else's post
+      if (!prevLiked && user && user.id !== post.author.id) {
+        addNotification({
+          type: 'like',
+          message: 'Gönderiniz beğenildi',
+          userId: post.author.id,
+          userName: 'Bir kullanıcı',
+          userAvatar: undefined,
+          postId: post.id,
+        })
+      }
     } catch {
       // Revert on error
       setIsLiked(prevLiked)

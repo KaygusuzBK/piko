@@ -1,129 +1,169 @@
 /**
- * NotificationCenter Component
+ * Notification Center Component
  * 
- * Dropdown notification center for the header.
- * Shows recent notifications with quick actions.
+ * Dropdown showing recent notifications with unread count.
  */
 
 'use client'
 
-import { NotificationWithActor } from '@/lib/types'
-import { NotificationCard } from './NotificationCard'
-import { Button } from '@/components/ui/button'
-import { Bell, Settings, Loader2 } from 'lucide-react'
-import Link from 'next/link'
+import { type Notification } from '@/stores/notificationStore'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Bell, Check } from 'lucide-react'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import Link from 'next/link'
+import { cn } from '@/lib/utils'
+
+const getNotificationIcon = (type: Notification['type']) => {
+  switch (type) {
+    case 'like':
+      return '❤️'
+    case 'comment':
+      return '💬'
+    case 'follow':
+      return '👥'
+    case 'mention':
+      return '@'
+    case 'reply':
+      return '↩️'
+    default:
+      return '🔔'
+  }
+}
+
+const getNotificationMessage = (notification: Notification) => {
+  const { userName, type } = notification
+  
+  switch (type) {
+    case 'like':
+      return `${userName} gönderinizi beğendi`
+    case 'comment':
+      return `${userName} gönderinize yorum yaptı`
+    case 'follow':
+      return `${userName} sizi takip etmeye başladı`
+    case 'mention':
+      return `${userName} sizden bahsetti`
+    case 'reply':
+      return `${userName} yorumunuza cevap verdi`
+    default:
+      return notification.message
+  }
+}
 
 interface NotificationCenterProps {
-  notifications: NotificationWithActor[]
+  notifications: Notification[]
   unreadCount: number
-  loading?: boolean
-  onMarkAsRead?: (notificationId: string) => void
-  onMarkAllAsRead?: () => void
+  onMarkAsRead: (notificationId: string) => void
+  onMarkAllAsRead: () => void
 }
 
 export function NotificationCenter({
   notifications,
   unreadCount,
-  loading,
   onMarkAsRead,
-  onMarkAllAsRead
+  onMarkAllAsRead,
 }: NotificationCenterProps) {
-  const recentNotifications = notifications.slice(0, 5)
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <Badge 
-              variant="destructive" 
-              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-            >
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </Badge>
+            <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-xs text-white flex items-center justify-center">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
           )}
         </Button>
       </DropdownMenuTrigger>
       
-      <DropdownMenuContent 
-        align="end" 
-        className="w-[400px] p-0"
-        sideOffset={8}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <h3 className="font-semibold text-lg">Bildirimler</h3>
-          <div className="flex items-center gap-2">
-            {unreadCount > 0 && onMarkAllAsRead && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onMarkAllAsRead}
-                className="text-xs h-8"
-              >
-                Tümünü okundu işaretle
-              </Button>
-            )}
-            <Link href="/settings#notifications">
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Settings className="h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-
-        {/* Notifications List */}
-        <div className="max-h-[500px] overflow-y-auto">
-          {loading ? (
-            <div className="flex items-center justify-center h-32">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            </div>
-          ) : recentNotifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-32 px-4">
-              <Bell className="h-8 w-8 text-muted-foreground/50 mb-2" />
-              <p className="text-sm text-muted-foreground text-center">
-                Henüz bildiriminiz yok
-              </p>
-            </div>
-          ) : (
-            <>
-              {recentNotifications.map(notification => (
-                <NotificationCard
-                  key={notification.id}
-                  notification={notification}
-                  onClick={() => {
-                    if (!notification.is_read && onMarkAsRead) {
-                      onMarkAsRead(notification.id)
-                    }
-                  }}
-                />
-              ))}
-            </>
+      <DropdownMenuContent align="end" className="w-80">
+        <DropdownMenuLabel className="flex items-center justify-between">
+          <span>Bildirimler</span>
+          {unreadCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onMarkAllAsRead}
+              className="h-6 px-2 text-xs"
+            >
+              <Check className="h-3 w-3 mr-1" />
+              Tümünü Okundu İşaretle
+            </Button>
           )}
-        </div>
-
-        {/* Footer - View All Link */}
-        {recentNotifications.length > 0 && (
-          <div className="border-t border-border">
-            <Link href="/notifications">
-              <Button 
-                variant="ghost" 
-                className="w-full rounded-none text-primary hover:text-primary hover:bg-primary/10"
-              >
-                Tüm bildirimleri görüntüle
-              </Button>
-            </Link>
+        </DropdownMenuLabel>
+        
+        <DropdownMenuSeparator />
+        
+        {notifications.length === 0 ? (
+          <div className="p-4 text-center text-sm text-muted-foreground">
+            Henüz bildirim yok
           </div>
+        ) : (
+          <div className="max-h-80 overflow-y-auto">
+            {notifications.slice(0, 10).map((notification) => (
+              <DropdownMenuItem
+                key={notification.id}
+                className="p-3 cursor-pointer"
+                onClick={() => onMarkAsRead(notification.id)}
+              >
+                <div className="flex items-start gap-3 w-full">
+                  <div className="flex-shrink-0">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={notification.userAvatar} />
+                      <AvatarFallback>
+                        {notification.userName.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm">{getNotificationIcon(notification.type)}</span>
+                      <p className={cn(
+                        'text-sm',
+                        !notification.isRead && 'font-semibold'
+                      )}>
+                        {getNotificationMessage(notification)}
+                      </p>
+                    </div>
+                    
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(notification.timestamp).toLocaleString('tr-TR', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                  
+                  {!notification.isRead && (
+                    <div className="h-2 w-2 rounded-full bg-blue-500 flex-shrink-0 mt-2" />
+                  )}
+                </div>
+              </DropdownMenuItem>
+            ))}
+          </div>
+        )}
+        
+        {notifications.length > 0 && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/notifications" className="text-center justify-center">
+                Tüm Bildirimleri Görüntüle
+              </Link>
+            </DropdownMenuItem>
+          </>
         )}
       </DropdownMenuContent>
     </DropdownMenu>
   )
 }
-

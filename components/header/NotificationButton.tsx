@@ -1,70 +1,33 @@
+/**
+ * Simple Notification Button Component
+ * 
+ * Uses Zustand notification store instead of complex hooks.
+ */
+
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useAuthStore } from '@/stores/authStore'
+import { useNotificationStore } from '@/stores/notificationStore'
 import { NotificationCenter } from '@/components/notifications/NotificationCenter'
-import { 
-  useNotifications, 
-  useUnreadCount, 
-  useMarkAsRead, 
-  useNotificationSubscription 
-} from '@/hooks'
-import type { Notification } from '@/lib/types'
 
 export function NotificationButton() {
-  const { user } = useAuthStore()
-  const { notifications, refresh: refreshNotifications } = useNotifications(user?.id, 10)
-  const { count, increment, decrement } = useUnreadCount(user?.id)
-  const { markAsRead, markAllAsRead } = useMarkAsRead()
-  const [mounted, setMounted] = useState(false)
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotificationStore()
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  // Handle new notification from real-time subscription
-  const handleNewNotification = (notification: Notification) => {
-    console.log('New notification received in NotificationButton:', notification)
-    increment()
-    refreshNotifications()
+  const handleMarkAsRead = (notificationId: string) => {
+    markAsRead(notificationId)
   }
 
-  // Subscribe to real-time notifications
-  useNotificationSubscription(user?.id, handleNewNotification)
-
-  const handleMarkAsRead = async (notificationId: string) => {
-    if (!user?.id) return
-    
-    const success = await markAsRead(notificationId, user.id)
-    if (success) {
-      decrement()
-      refreshNotifications()
-    }
-  }
-
-  const handleMarkAllAsRead = async () => {
-    if (!user?.id) return
-    
-    const success = await markAllAsRead(user.id)
-    if (success) {
-      refreshNotifications()
-    }
-  }
-
-  // Don't render on server or if user is not logged in
-  if (!mounted || !user) {
-    return null
+  const handleMarkAllAsRead = () => {
+    markAllAsRead()
   }
 
   return (
     <div className="hidden sm:block">
       <NotificationCenter
         notifications={notifications}
-        unreadCount={count}
+        unreadCount={unreadCount}
         onMarkAsRead={handleMarkAsRead}
         onMarkAllAsRead={handleMarkAllAsRead}
       />
     </div>
   )
 }
-
