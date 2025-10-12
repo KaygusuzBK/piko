@@ -25,26 +25,61 @@ export default function Home() {
 
   const handleLike = useCallback(async (postId: string) => {
     if (!user?.id) return
+    
+    // Optimistic update
+    setPosts(prevPosts => prevPosts.map(post => {
+      if (post.id === postId) {
+        const isCurrentlyLiked = post.user_interaction_status?.isLiked || false
+        return {
+          ...post,
+          likes_count: isCurrentlyLiked ? post.likes_count - 1 : post.likes_count + 1,
+          user_interaction_status: {
+            isLiked: !isCurrentlyLiked,
+            isRetweeted: post.user_interaction_status?.isRetweeted || false,
+            isBookmarked: post.user_interaction_status?.isBookmarked || false
+          }
+        }
+      }
+      return post
+    }))
+    
     try {
       await toggleLike(postId, user.id)
-      refresh()
     } catch (error) {
       console.error('Error toggling like:', error)
+      // Revert on error
+      setPosts(prevPosts => prevPosts.map(post => {
+        if (post.id === postId) {
+          const isCurrentlyLiked = post.user_interaction_status?.isLiked || false
+          return {
+            ...post,
+            likes_count: isCurrentlyLiked ? post.likes_count - 1 : post.likes_count + 1,
+            user_interaction_status: {
+              isLiked: !isCurrentlyLiked,
+              isRetweeted: post.user_interaction_status?.isRetweeted || false,
+              isBookmarked: post.user_interaction_status?.isBookmarked || false
+            }
+          }
+        }
+        return post
+      }))
       throw error
     }
-  }, [user?.id, toggleLike, refresh])
+  }, [user?.id, toggleLike, setPosts])
 
   const handleRetweet = useCallback(async (postId: string) => {
     if (!user?.id) return
+    
     try {
       const isRetweeted = await toggleRetweet(postId, user.id)
       if (isRetweeted) {
-        // Move to top
+        // Move to top and update
         setPosts(prevPosts => {
           const retweetedPost = prevPosts.find(p => p.id === postId)
           if (retweetedPost) {
             const updatedPost = {
               ...retweetedPost,
+              retweets_count: retweetedPost.retweets_count + 1,
               user_interaction_status: {
                 ...retweetedPost.user_interaction_status,
                 isRetweeted: true,
@@ -57,24 +92,69 @@ export default function Home() {
           return prevPosts
         })
       } else {
-        refresh()
+        // Just update the count
+        setPosts(prevPosts => prevPosts.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              retweets_count: post.retweets_count - 1,
+              user_interaction_status: {
+                isLiked: post.user_interaction_status?.isLiked || false,
+                isRetweeted: false,
+                isBookmarked: post.user_interaction_status?.isBookmarked || false
+              }
+            }
+          }
+          return post
+        }))
       }
     } catch (error) {
       console.error('Error toggling retweet:', error)
       throw error
     }
-  }, [user?.id, toggleRetweet, setPosts, refresh])
+  }, [user?.id, toggleRetweet, setPosts])
 
   const handleBookmark = useCallback(async (postId: string) => {
     if (!user?.id) return
+    
+    // Optimistic update
+    setPosts(prevPosts => prevPosts.map(post => {
+      if (post.id === postId) {
+        const isCurrentlyBookmarked = post.user_interaction_status?.isBookmarked || false
+        return {
+          ...post,
+          user_interaction_status: {
+            isLiked: post.user_interaction_status?.isLiked || false,
+            isRetweeted: post.user_interaction_status?.isRetweeted || false,
+            isBookmarked: !isCurrentlyBookmarked
+          }
+        }
+      }
+      return post
+    }))
+    
     try {
       await toggleBookmark(postId, user.id)
-      refresh()
     } catch (error) {
       console.error('Error toggling bookmark:', error)
+      // Revert on error
+      setPosts(prevPosts => prevPosts.map(post => {
+        if (post.id === postId) {
+          const isCurrentlyBookmarked = post.user_interaction_status?.isBookmarked || false
+          return {
+            ...post,
+            user_interaction_status: {
+              isLiked: post.user_interaction_status?.isLiked || false,
+              isRetweeted: post.user_interaction_status?.isRetweeted || false,
+              isBookmarked: !isCurrentlyBookmarked
+            }
+          }
+        }
+        return post
+      }))
       throw error
     }
-  }, [user?.id, toggleBookmark, refresh])
+  }, [user?.id, toggleBookmark, setPosts])
 
   const handleComment = useCallback((postId: string) => {
     console.log('Comment on post:', postId)

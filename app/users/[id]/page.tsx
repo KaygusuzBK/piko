@@ -14,6 +14,7 @@ import { useUserProfile, useUpdateProfile, useImageUpload } from '@/hooks/useUse
 import { useUserPosts } from '@/hooks/usePosts'
 import { usePostInteractions } from '@/hooks/usePostInteractions'
 import { deletePost } from '@/lib/posts'
+import { PostWithAuthor } from '@/lib/types'
 
 interface UserDetailPageProps {
   params: Promise<{ id: string }>
@@ -24,7 +25,16 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
   const { user, loading } = useAuthStore()
   const router = useRouter()
   const { user: dbUser, loading: userLoading, setUser: setDbUser } = useUserProfile(paramsId)
-  const { posts, likedPosts, favoritePosts, loading: postsLoading, refresh } = useUserPosts(paramsId, user?.id)
+  const { 
+    posts, 
+    likedPosts, 
+    favoritePosts, 
+    setPosts,
+    setLikedPosts,
+    setFavoritePosts,
+    loading: postsLoading, 
+    refresh 
+  } = useUserPosts(paramsId, user?.id)
   const { toggleLike, toggleRetweet, toggleBookmark } = usePostInteractions()
   const { updateProfile } = useUpdateProfile(paramsId)
   const { uploadImage: uploadAvatar } = useImageUpload(paramsId, 'avatar')
@@ -70,22 +80,116 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
     }
   }
 
+  const updatePostInAllLists = (postId: string, updateFn: (post: PostWithAuthor) => PostWithAuthor) => {
+    setPosts(prev => prev.map(p => p.id === postId ? updateFn(p) : p))
+    setLikedPosts(prev => prev.map(p => p.id === postId ? updateFn(p) : p))
+    setFavoritePosts(prev => prev.map(p => p.id === postId ? updateFn(p) : p))
+  }
+
   const handleLike = async (postId: string) => {
     if (!user?.id) return
-    await toggleLike(postId, user.id)
-    refresh()
+    
+    // Optimistic update
+    updatePostInAllLists(postId, (post) => {
+      const isCurrentlyLiked = post.user_interaction_status?.isLiked || false
+      return {
+        ...post,
+        likes_count: isCurrentlyLiked ? post.likes_count - 1 : post.likes_count + 1,
+        user_interaction_status: {
+          isLiked: !isCurrentlyLiked,
+          isRetweeted: post.user_interaction_status?.isRetweeted || false,
+          isBookmarked: post.user_interaction_status?.isBookmarked || false
+        }
+      }
+    })
+    
+    try {
+      await toggleLike(postId, user.id)
+    } catch {
+      // Revert on error
+      updatePostInAllLists(postId, (post) => {
+        const isCurrentlyLiked = post.user_interaction_status?.isLiked || false
+        return {
+          ...post,
+          likes_count: isCurrentlyLiked ? post.likes_count - 1 : post.likes_count + 1,
+          user_interaction_status: {
+            isLiked: !isCurrentlyLiked,
+            isRetweeted: post.user_interaction_status?.isRetweeted || false,
+            isBookmarked: post.user_interaction_status?.isBookmarked || false
+          }
+        }
+      })
+    }
   }
 
   const handleRetweet = async (postId: string) => {
     if (!user?.id) return
-    await toggleRetweet(postId, user.id)
-    refresh()
+    
+    // Optimistic update
+    updatePostInAllLists(postId, (post) => {
+      const isCurrentlyRetweeted = post.user_interaction_status?.isRetweeted || false
+      return {
+        ...post,
+        retweets_count: isCurrentlyRetweeted ? post.retweets_count - 1 : post.retweets_count + 1,
+        user_interaction_status: {
+          isLiked: post.user_interaction_status?.isLiked || false,
+          isRetweeted: !isCurrentlyRetweeted,
+          isBookmarked: post.user_interaction_status?.isBookmarked || false
+        }
+      }
+    })
+    
+    try {
+      await toggleRetweet(postId, user.id)
+    } catch {
+      // Revert on error
+      updatePostInAllLists(postId, (post) => {
+        const isCurrentlyRetweeted = post.user_interaction_status?.isRetweeted || false
+        return {
+          ...post,
+          retweets_count: isCurrentlyRetweeted ? post.retweets_count - 1 : post.retweets_count + 1,
+          user_interaction_status: {
+            isLiked: post.user_interaction_status?.isLiked || false,
+            isRetweeted: !isCurrentlyRetweeted,
+            isBookmarked: post.user_interaction_status?.isBookmarked || false
+          }
+        }
+      })
+    }
   }
 
   const handleBookmark = async (postId: string) => {
     if (!user?.id) return
-    await toggleBookmark(postId, user.id)
-    refresh()
+    
+    // Optimistic update
+    updatePostInAllLists(postId, (post) => {
+      const isCurrentlyBookmarked = post.user_interaction_status?.isBookmarked || false
+      return {
+        ...post,
+        user_interaction_status: {
+          isLiked: post.user_interaction_status?.isLiked || false,
+          isRetweeted: post.user_interaction_status?.isRetweeted || false,
+          isBookmarked: !isCurrentlyBookmarked
+        }
+      }
+    })
+    
+    try {
+      await toggleBookmark(postId, user.id)
+    } catch {
+      // Revert on error
+      updatePostInAllLists(postId, (post) => {
+        const isCurrentlyBookmarked = post.user_interaction_status?.isBookmarked || false
+        return {
+          ...post,
+          user_interaction_status: {
+            isLiked: post.user_interaction_status?.isLiked || false,
+            isRetweeted: post.user_interaction_status?.isRetweeted || false,
+            isBookmarked: !isCurrentlyBookmarked
+          }
+        }
+      })
+    }
   }
 
   const handleDelete = async (postId: string) => {

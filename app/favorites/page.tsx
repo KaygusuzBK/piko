@@ -13,7 +13,7 @@ import { usePostInteractions } from '@/hooks/usePostInteractions'
 export default function FavoritesPage() {
   const { user, loading } = useAuthStore()
   const router = useRouter()
-  const { posts: favorites, loading: isLoading, refresh } = useFavoritePosts(user?.id)
+  const { posts: favorites, setPosts: setFavorites, loading: isLoading } = useFavoritePosts(user?.id)
   const { toggleLike, toggleRetweet, toggleBookmark } = usePostInteractions()
 
   useEffect(() => {
@@ -24,21 +24,130 @@ export default function FavoritesPage() {
 
   const handleLike = useCallback(async (postId: string) => {
     if (!user?.id) return
-    await toggleLike(postId, user.id)
-    refresh()
-  }, [user?.id, toggleLike, refresh])
+    
+    // Optimistic update
+    setFavorites(prevPosts => prevPosts.map(post => {
+      if (post.id === postId) {
+        const isCurrentlyLiked = post.user_interaction_status?.isLiked || false
+        return {
+          ...post,
+          likes_count: isCurrentlyLiked ? post.likes_count - 1 : post.likes_count + 1,
+          user_interaction_status: {
+            isLiked: !isCurrentlyLiked,
+            isRetweeted: post.user_interaction_status?.isRetweeted || false,
+            isBookmarked: post.user_interaction_status?.isBookmarked || false
+          }
+        }
+      }
+      return post
+    }))
+    
+    try {
+      await toggleLike(postId, user.id)
+    } catch (error) {
+      console.error('Error toggling like:', error)
+      // Revert on error
+      setFavorites(prevPosts => prevPosts.map(post => {
+        if (post.id === postId) {
+          const isCurrentlyLiked = post.user_interaction_status?.isLiked || false
+          return {
+            ...post,
+            likes_count: isCurrentlyLiked ? post.likes_count - 1 : post.likes_count + 1,
+            user_interaction_status: {
+              isLiked: !isCurrentlyLiked,
+              isRetweeted: post.user_interaction_status?.isRetweeted || false,
+              isBookmarked: post.user_interaction_status?.isBookmarked || false
+            }
+          }
+        }
+        return post
+      }))
+    }
+  }, [user?.id, toggleLike, setFavorites])
 
   const handleRetweet = useCallback(async (postId: string) => {
     if (!user?.id) return
-    await toggleRetweet(postId, user.id)
-    refresh()
-  }, [user?.id, toggleRetweet, refresh])
+    
+    // Optimistic update
+    setFavorites(prevPosts => prevPosts.map(post => {
+      if (post.id === postId) {
+        const isCurrentlyRetweeted = post.user_interaction_status?.isRetweeted || false
+        return {
+          ...post,
+          retweets_count: isCurrentlyRetweeted ? post.retweets_count - 1 : post.retweets_count + 1,
+          user_interaction_status: {
+            isLiked: post.user_interaction_status?.isLiked || false,
+            isRetweeted: !isCurrentlyRetweeted,
+            isBookmarked: post.user_interaction_status?.isBookmarked || false
+          }
+        }
+      }
+      return post
+    }))
+    
+    try {
+      await toggleRetweet(postId, user.id)
+    } catch (error) {
+      console.error('Error toggling retweet:', error)
+      // Revert on error
+      setFavorites(prevPosts => prevPosts.map(post => {
+        if (post.id === postId) {
+          const isCurrentlyRetweeted = post.user_interaction_status?.isRetweeted || false
+          return {
+            ...post,
+            retweets_count: isCurrentlyRetweeted ? post.retweets_count - 1 : post.retweets_count + 1,
+            user_interaction_status: {
+              isLiked: post.user_interaction_status?.isLiked || false,
+              isRetweeted: !isCurrentlyRetweeted,
+              isBookmarked: post.user_interaction_status?.isBookmarked || false
+            }
+          }
+        }
+        return post
+      }))
+    }
+  }, [user?.id, toggleRetweet, setFavorites])
 
   const handleBookmark = useCallback(async (postId: string) => {
     if (!user?.id) return
-    await toggleBookmark(postId, user.id)
-    refresh()
-  }, [user?.id, toggleBookmark, refresh])
+    
+    // Optimistic update
+    setFavorites(prevPosts => prevPosts.map(post => {
+      if (post.id === postId) {
+        const isCurrentlyBookmarked = post.user_interaction_status?.isBookmarked || false
+        return {
+          ...post,
+          user_interaction_status: {
+            isLiked: post.user_interaction_status?.isLiked || false,
+            isRetweeted: post.user_interaction_status?.isRetweeted || false,
+            isBookmarked: !isCurrentlyBookmarked
+          }
+        }
+      }
+      return post
+    }))
+    
+    try {
+      await toggleBookmark(postId, user.id)
+    } catch (error) {
+      console.error('Error toggling bookmark:', error)
+      // Revert on error
+      setFavorites(prevPosts => prevPosts.map(post => {
+        if (post.id === postId) {
+          const isCurrentlyBookmarked = post.user_interaction_status?.isBookmarked || false
+          return {
+            ...post,
+            user_interaction_status: {
+              isLiked: post.user_interaction_status?.isLiked || false,
+              isRetweeted: post.user_interaction_status?.isRetweeted || false,
+              isBookmarked: !isCurrentlyBookmarked
+            }
+          }
+        }
+        return post
+      }))
+    }
+  }, [user?.id, toggleBookmark, setFavorites])
 
   if (loading || !user) {
     return (
