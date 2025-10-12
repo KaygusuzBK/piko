@@ -50,6 +50,8 @@ END $$;
 CREATE TABLE IF NOT EXISTS posts (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   content TEXT NOT NULL CHECK (char_length(content) <= 280),
+  image_urls TEXT[] DEFAULT ARRAY[]::TEXT[],
+  type TEXT DEFAULT 'text' CHECK (type IN ('text', 'media')),
   author_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -57,6 +59,34 @@ CREATE TABLE IF NOT EXISTS posts (
   comments_count INTEGER DEFAULT 0 CHECK (comments_count >= 0),
   retweets_count INTEGER DEFAULT 0 CHECK (retweets_count >= 0)
 );
+
+-- Migrate existing image_url to image_urls array (for existing tables)
+DO $$
+BEGIN
+  -- Add image_urls column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'posts' AND column_name = 'image_urls'
+  ) THEN
+    ALTER TABLE posts ADD COLUMN image_urls TEXT[] DEFAULT ARRAY[]::TEXT[];
+    
+    -- Migrate existing image_url data to image_urls array
+    UPDATE posts 
+    SET image_urls = ARRAY[image_url]::TEXT[]
+    WHERE image_url IS NOT NULL AND image_url != '';
+    
+    -- Drop old image_url column
+    ALTER TABLE posts DROP COLUMN IF EXISTS image_url;
+  END IF;
+  
+  -- Add type column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'posts' AND column_name = 'type'
+  ) THEN
+    ALTER TABLE posts ADD COLUMN type TEXT DEFAULT 'text' CHECK (type IN ('text', 'media'));
+  END IF;
+END $$;
 
 -- 4. Post interactions tablosu (beğeni, retweet, bookmark)
 CREATE TABLE IF NOT EXISTS post_interactions (
@@ -71,12 +101,14 @@ CREATE TABLE IF NOT EXISTS post_interactions (
 -- 5. Indexler
 CREATE INDEX IF NOT EXISTS idx_posts_author_id ON posts(author_id);
 CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_type ON posts(type);
+CREATE INDEX IF NOT EXISTS idx_posts_author_type ON posts(author_id, type);
 CREATE INDEX IF NOT EXISTS idx_post_interactions_user_id ON post_interactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_post_interactions_post_id ON post_interactions(post_id);
 CREATE INDEX IF NOT EXISTS idx_post_interactions_user_type ON post_interactions(user_id, type);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON public.users(username) WHERE username IS NOT NULL;
 
--- 5.1 Storage buckets for user images
+-- 5.1 Storage buckets for user images and post images
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'avatars') THEN
@@ -84,6 +116,9 @@ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'banners') THEN
     INSERT INTO storage.buckets (id, name, public) VALUES ('banners', 'banners', true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'post-images') THEN
+    INSERT INTO storage.buckets (id, name, public) VALUES ('post-images', 'post-images', true);
   END IF;
 END $$;
 
@@ -101,11 +136,13 @@ DO $$
 BEGIN
   DROP POLICY IF EXISTS "Public read avatars" ON storage.objects;
   DROP POLICY IF EXISTS "Public read banners" ON storage.objects;
+  DROP POLICY IF EXISTS "Public read post images" ON storage.objects;
   DROP POLICY IF EXISTS "Users manage own avatar objects" ON storage.objects;
   DROP POLICY IF EXISTS "Users manage own banner objects" ON storage.objects;
+  DROP POLICY IF EXISTS "Users manage own post images" ON storage.objects;
 END $$;
 
--- Public read for avatars and banners
+-- Public read for avatars, banners and post images
 CREATE POLICY "Public read avatars" ON storage.objects
   FOR SELECT TO public
   USING (bucket_id = 'avatars');
@@ -113,6 +150,10 @@ CREATE POLICY "Public read avatars" ON storage.objects
 CREATE POLICY "Public read banners" ON storage.objects
   FOR SELECT TO public
   USING (bucket_id = 'banners');
+
+CREATE POLICY "Public read post images" ON storage.objects
+  FOR SELECT TO public
+  USING (bucket_id = 'post-images');
 
 -- Helpers: users can write only to their own folder: <uid>/...
 -- This uses split_part(name,'/',1) to compare the folder prefix
@@ -132,6 +173,15 @@ CREATE POLICY "Users manage own banner objects" ON storage.objects
   )
   WITH CHECK (
     bucket_id = 'banners' AND split_part(name, '/', 1) = auth.uid()::text
+  );
+
+CREATE POLICY "Users manage own post images" ON storage.objects
+  FOR ALL TO authenticated
+  USING (
+    bucket_id = 'post-images' AND split_part(name, '/', 1) = auth.uid()::text
+  )
+  WITH CHECK (
+    bucket_id = 'post-images' AND split_part(name, '/', 1) = auth.uid()::text
   );
 
 -- Eski profiles politikalarını kaldır (eğer varsa)

@@ -5,7 +5,7 @@ interface ProfileTabsProps {
 
 export function ProfileTabs({ activeTab, onTabChange }: ProfileTabsProps) {
   const tabs = [
-    { id: 'posts' as const, label: 'Pikolar' },
+    { id: 'posts' as const, label: 'SOC-AI\'lar' },
     { id: 'replies' as const, label: 'Yanıtlar' },
     { id: 'media' as const, label: 'Medya' },
     { id: 'likes' as const, label: 'Beğeniler' },

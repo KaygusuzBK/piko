@@ -64,6 +64,10 @@ export class PostQueryService {
   async getUserFavoritePosts(userId: string, limit: number = 20, offset: number = 0, viewerUserId?: string): Promise<PostWithAuthor[]> {
     return this.fetchPostsWithInteractions({ bookmarkedByUserId: userId, limit, offset }, viewerUserId)
   }
+
+  async getUserMediaPosts(userId: string, limit: number = 20, offset: number = 0, viewerUserId?: string): Promise<PostWithAuthor[]> {
+    return this.fetchPostsWithInteractions({ authorId: userId, type: 'media', limit, offset }, viewerUserId)
+  }
 }
 
 // Singleton instance

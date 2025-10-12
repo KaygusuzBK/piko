@@ -28,10 +28,12 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
   const { 
     posts, 
     likedPosts, 
-    favoritePosts, 
+    favoritePosts,
+    mediaPosts,
     setPosts,
     setLikedPosts,
     setFavoritePosts,
+    setMediaPosts,
     loading: postsLoading, 
     refresh 
   } = useUserPosts(paramsId, user?.id)
@@ -84,12 +86,13 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
     setPosts(prev => prev.map(p => p.id === postId ? updateFn(p) : p))
     setLikedPosts(prev => prev.map(p => p.id === postId ? updateFn(p) : p))
     setFavoritePosts(prev => prev.map(p => p.id === postId ? updateFn(p) : p))
+    setMediaPosts(prev => prev.map(p => p.id === postId ? updateFn(p) : p))
   }
 
   const handleLike = async (postId: string) => {
     if (!user?.id) return
     
-    const post = [...posts, ...likedPosts, ...favoritePosts].find(p => p.id === postId)
+    const post = [...posts, ...likedPosts, ...favoritePosts, ...mediaPosts].find(p => p.id === postId)
     const isCurrentlyLiked = post?.user_interaction_status?.isLiked || false
     
     // If unliking from "Beğeniler" tab, remove from list
@@ -106,6 +109,15 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
         }
       } : p))
       setFavoritePosts(prev => prev.map(p => p.id === postId ? {
+        ...p,
+        likes_count: p.likes_count - 1,
+        user_interaction_status: {
+          isLiked: false,
+          isRetweeted: p.user_interaction_status?.isRetweeted || false,
+          isBookmarked: p.user_interaction_status?.isBookmarked || false
+        }
+      } : p))
+      setMediaPosts(prev => prev.map(p => p.id === postId ? {
         ...p,
         likes_count: p.likes_count - 1,
         user_interaction_status: {
@@ -193,7 +205,7 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
   const handleBookmark = async (postId: string) => {
     if (!user?.id) return
     
-    const post = [...posts, ...likedPosts, ...favoritePosts].find(p => p.id === postId)
+    const post = [...posts, ...likedPosts, ...favoritePosts, ...mediaPosts].find(p => p.id === postId)
     const isCurrentlyBookmarked = post?.user_interaction_status?.isBookmarked || false
     
     // If removing bookmark from "Favoriler" tab, remove from list
@@ -209,6 +221,14 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
         }
       } : p))
       setLikedPosts(prev => prev.map(p => p.id === postId ? {
+        ...p,
+        user_interaction_status: {
+          isLiked: p.user_interaction_status?.isLiked || false,
+          isRetweeted: p.user_interaction_status?.isRetweeted || false,
+          isBookmarked: false
+        }
+      } : p))
+      setMediaPosts(prev => prev.map(p => p.id === postId ? {
         ...p,
         user_interaction_status: {
           isLiked: p.user_interaction_status?.isLiked || false,
@@ -274,12 +294,18 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
 
   const isOwner = user.id === dbUser.id
 
-  const currentPosts = activeTab === 'posts' ? posts : activeTab === 'likes' ? likedPosts : favoritePosts
+  const currentPosts = 
+    activeTab === 'posts' ? posts 
+    : activeTab === 'likes' ? likedPosts 
+    : activeTab === 'media' ? mediaPosts
+    : favoritePosts
   const emptyMessage =
     activeTab === 'posts'
       ? 'Henüz gönderi yok.'
       : activeTab === 'likes'
       ? 'Henüz beğeni yok.'
+      : activeTab === 'media'
+      ? 'Henüz medya yok.'
       : 'Henüz favori yok.'
 
   return (

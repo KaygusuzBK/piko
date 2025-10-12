@@ -12,6 +12,8 @@ export class PostRepository {
         .insert([{
           content: data.content,
           author_id: data.author_id,
+          image_urls: data.image_urls || [],
+          type: data.type || 'text',
           likes_count: 0,
           comments_count: 0,
           retweets_count: 0
@@ -72,6 +74,10 @@ export class PostRepository {
       // Apply filters
       if (filters.authorId) {
         query = query.eq('author_id', filters.authorId)
+      }
+
+      if (filters.type) {
+        query = query.eq('type', filters.type)
       }
 
       // For liked/bookmarked posts, we need inner join

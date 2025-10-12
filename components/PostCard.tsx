@@ -7,6 +7,7 @@ import { PostWithAuthor } from '@/lib/types'
 import { PostHeader } from './post/PostHeader'
 import { PostContent } from './post/PostContent'
 import { PostActions } from './post/PostActions'
+import Image from 'next/image'
 
 interface PostCardProps {
   post: PostWithAuthor
@@ -131,6 +132,35 @@ export function PostCard({
             />
 
             <PostContent content={post.content} />
+
+            {/* Multiple Post Images */}
+            {post.image_urls && post.image_urls.length > 0 && (
+              <div className={`w-full mt-2 grid gap-2 ${
+                post.image_urls.length === 1 ? 'grid-cols-1' :
+                post.image_urls.length === 2 ? 'grid-cols-2' :
+                post.image_urls.length === 3 ? 'grid-cols-2' :
+                'grid-cols-2'
+              }`}>
+                {post.image_urls.map((imageUrl, index) => (
+                  <div 
+                    key={index} 
+                    className={`relative rounded-lg overflow-hidden border border-border/50 ${
+                      post.image_urls!.length === 3 && index === 0 ? 'col-span-2' : ''
+                    }`}
+                  >
+                    <div className="relative w-full" style={{ aspectRatio: post.image_urls!.length === 1 ? '16/9' : '1/1' }}>
+                      <Image
+                        src={imageUrl}
+                        alt={`Post image ${index + 1}`}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <PostActions
               commentsCount={post.comments_count}
