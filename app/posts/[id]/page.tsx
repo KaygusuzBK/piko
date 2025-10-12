@@ -424,6 +424,8 @@ export default function PostDetailPage() {
 
                 {/* Actions */}
                 <PostActions
+                  postId={post.id}
+                  postContent={post.content}
                   commentsCount={post.comments_count}
                   retweetsCount={post.retweets_count}
                   likesCount={post.likes_count}

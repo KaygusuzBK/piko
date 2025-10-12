@@ -1,13 +1,15 @@
 import { Button } from '@/components/ui/button'
+import { ShareMenu } from '@/components/ShareMenu'
 import {
   Heart,
   MessageCircle,
   RotateCcw,
-  ArrowUpFromLine,
   Star
 } from 'lucide-react'
 
 interface PostActionsProps {
+  postId: string
+  postContent: string
   commentsCount: number
   retweetsCount: number
   likesCount: number
@@ -21,6 +23,8 @@ interface PostActionsProps {
 }
 
 export function PostActions({
+  postId,
+  postContent,
   commentsCount,
   retweetsCount,
   likesCount,
@@ -100,13 +104,7 @@ export function PostActions({
         </Button>
       </div>
 
-      <Button
-        variant="ghost"
-        size="sm"
-        className="text-muted-foreground hover:text-foreground dark:text-white/80 dark:hover:text-white h-6 sm:h-7 px-1 sm:px-2 transition-all duration-200 hover:scale-110"
-      >
-        <ArrowUpFromLine className="h-3 w-3 sm:h-4 sm:w-4 transition-transform duration-200 hover:translate-y-[-2px]" />
-      </Button>
+      <ShareMenu postId={postId} postContent={postContent} />
     </div>
   )
 }

@@ -184,6 +184,8 @@ export function PostCard({
             )}
 
             <PostActions
+              postId={post.id}
+              postContent={post.content}
               commentsCount={post.comments_count}
               retweetsCount={retweetsCount}
               likesCount={likesCount}
