@@ -1,62 +1,44 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Header } from '@/components/Header'
 import { LeftSidebar } from '@/components/LeftSidebar'
 import { RightSidebar } from '@/components/RightSidebar'
 import { PostCard } from '@/components/PostCard'
 import { useAuthStore } from '@/stores/authStore'
-import { type PostWithAuthor, getUserFavoritePosts, togglePostBookmark, togglePostLike, togglePostRetweet } from '@/lib/posts'
+import { useFavoritePosts } from '@/hooks/usePosts'
+import { usePostInteractions } from '@/hooks/usePostInteractions'
 
 export default function FavoritesPage() {
   const { user, loading } = useAuthStore()
   const router = useRouter()
-  const [favorites, setFavorites] = useState<PostWithAuthor[]>([])
-  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const { posts: favorites, loading: isLoading, refresh } = useFavoritePosts(user?.id)
+  const { toggleLike, toggleRetweet, toggleBookmark } = usePostInteractions()
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login')
     }
   }, [loading, user, router])
 
-  // Load favorites
-  useEffect(() => {
-    const load = async () => {
-      if (!user?.id || loading) return
-      setIsLoading(true)
-      const data = await getUserFavoritePosts(user.id, 100, 0, user.id)
-      setFavorites(data)
-      setIsLoading(false)
-    }
-    load()
-  }, [user?.id, loading])
-
   const handleLike = useCallback(async (postId: string) => {
     if (!user?.id) return
-    await togglePostLike(postId, user.id)
-    // Refresh favorites to sync interaction status
-    const data = await getUserFavoritePosts(user.id, 100, 0, user.id)
-    setFavorites(data)
-  }, [user?.id])
+    await toggleLike(postId, user.id)
+    refresh()
+  }, [user?.id, toggleLike, refresh])
 
   const handleRetweet = useCallback(async (postId: string) => {
     if (!user?.id) return
-    await togglePostRetweet(postId, user.id)
-    // Refresh favorites to sync interaction status
-    const data = await getUserFavoritePosts(user.id, 100, 0, user.id)
-    setFavorites(data)
-  }, [user?.id])
+    await toggleRetweet(postId, user.id)
+    refresh()
+  }, [user?.id, toggleRetweet, refresh])
 
   const handleBookmark = useCallback(async (postId: string) => {
     if (!user?.id) return
-    await togglePostBookmark(postId, user.id)
-    // Refresh favorites (post will be removed if un-bookmarked)
-    const data = await getUserFavoritePosts(user.id, 100, 0, user.id)
-    setFavorites(data)
-  }, [user?.id])
+    await toggleBookmark(postId, user.id)
+    refresh()
+  }, [user?.id, toggleBookmark, refresh])
 
   if (loading || !user) {
     return (
@@ -72,10 +54,8 @@ export default function FavoritesPage() {
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-4 pt-4 sm:pt-6 pb-0 overflow-hidden min-h-0">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 h-full min-h-0">
-          {/* Left Sidebar */}
           <LeftSidebar />
 
-          {/* Favorites List */}
           <div className="lg:col-span-2 h-full min-h-0 overflow-y-auto scrollbar-hide border-x border-border">
             <div className="sticky top-0 z-10 bg-piko-header/60 backdrop-blur px-3 sm:px-4 py-3">
               <h1 className="text-lg sm:text-xl font-semibold text-foreground">Favoriler</h1>
@@ -96,9 +76,7 @@ export default function FavoritesPage() {
                       onBookmark={handleBookmark}
                       onComment={() => {}}
                       canDelete={user.id === post.author_id}
-                      onDelete={() => {
-                        // No delete from here; keep consistent behavior
-                      }}
+                      onDelete={() => {}}
                     />
                   </div>
                 ))}
@@ -106,12 +84,10 @@ export default function FavoritesPage() {
             )}
           </div>
 
-          {/* Right Sidebar */}
           <RightSidebar />
         </div>
       </main>
     </div>
   )
 }
-
 

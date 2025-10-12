@@ -1,65 +1,84 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { useRouter } from 'next/navigation'
 import { Header } from '@/components/Header'
 import { MainFeed } from '@/components/MainFeed'
 import { LeftSidebar } from '@/components/LeftSidebar'
 import { RightSidebar } from '@/components/RightSidebar'
-import { getPosts, PostWithAuthor, toggleLike, toggleRetweet, togglePostBookmark, getUserInteractionStatus } from '@/lib/posts'
-// import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-// import { Button } from '@/components/ui/button'
-// import { Separator } from '@/components/ui/separator'
-// import { Users, Sparkles } from 'lucide-react'
+import { useFeedPosts } from '@/hooks/usePosts'
+import { usePostInteractions } from '@/hooks/usePostInteractions'
 
 export default function Home() {
   const { user, loading } = useAuthStore()
   const router = useRouter()
-  const [posts, setPosts] = useState<PostWithAuthor[]>([])
+  const { posts, setPosts, refresh } = useFeedPosts(user?.id)
+  const { toggleLike, toggleRetweet, toggleBookmark } = usePostInteractions()
   const [isCreatePostCompact, setIsCreatePostCompact] = useState(false)
-  // const mainFeedRef = useRef<HTMLDivElement>(null)
 
-  // Scroll takibi MainFeed içine taşındı
-
-  // Load posts from Supabase - sadece bir kez yükle
-  useEffect(() => {
-    if (!user?.id || loading) return
-    
-    const loadPosts = async () => {
-      try {
-        const fetchedPosts = await getPosts(1000, 0, user.id)
-        setPosts(fetchedPosts)
-      } catch (error) {
-        console.error('Error loading posts:', error)
-      }
-    }
-    
-    loadPosts()
-  }, [user?.id, loading])
-
-  // Eğer kullanıcı yoksa login'e yönlendir
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login')
     }
   }, [loading, user, router])
 
-  const handlePostCreated = useCallback(() => {
-    // Yeni gönderi oluşturulduğunda feed'i yenile
+  const handleLike = useCallback(async (postId: string) => {
     if (!user?.id) return
-    
-    const loadPosts = async () => {
-      try {
-        const fetchedPosts = await getPosts(1000, 0, user.id)
-        setPosts(fetchedPosts)
-      } catch (error) {
-        console.error('Error loading posts:', error)
-      }
+    try {
+      await toggleLike(postId, user.id)
+      refresh()
+    } catch (error) {
+      console.error('Error toggling like:', error)
+      throw error
     }
-    
-    loadPosts()
-  }, [user?.id])
+  }, [user?.id, toggleLike, refresh])
+
+  const handleRetweet = useCallback(async (postId: string) => {
+    if (!user?.id) return
+    try {
+      const isRetweeted = await toggleRetweet(postId, user.id)
+      if (isRetweeted) {
+        // Move to top
+        setPosts(prevPosts => {
+          const retweetedPost = prevPosts.find(p => p.id === postId)
+          if (retweetedPost) {
+            const updatedPost = {
+              ...retweetedPost,
+              user_interaction_status: {
+                ...retweetedPost.user_interaction_status,
+                isRetweeted: true,
+                isLiked: retweetedPost.user_interaction_status?.isLiked || false,
+                isBookmarked: retweetedPost.user_interaction_status?.isBookmarked || false
+              }
+            }
+            return [updatedPost, ...prevPosts.filter(p => p.id !== postId)]
+          }
+          return prevPosts
+        })
+      } else {
+        refresh()
+      }
+    } catch (error) {
+      console.error('Error toggling retweet:', error)
+      throw error
+    }
+  }, [user?.id, toggleRetweet, setPosts, refresh])
+
+  const handleBookmark = useCallback(async (postId: string) => {
+    if (!user?.id) return
+    try {
+      await toggleBookmark(postId, user.id)
+      refresh()
+    } catch (error) {
+      console.error('Error toggling bookmark:', error)
+      throw error
+    }
+  }, [user?.id, toggleBookmark, refresh])
+
+  const handleComment = useCallback((postId: string) => {
+    console.log('Comment on post:', postId)
+  }, [])
 
   if (loading) {
     return (
@@ -70,79 +89,20 @@ export default function Home() {
   }
 
   if (!user) {
-    return null // Redirect handled above
+    return null
   }
 
-  const handleLike = async (postId: string) => {
-    if (!user?.id) return
-    
-    try {
-      await toggleLike(postId, user.id)
-      // Refresh interaction status for this post
-      const fetchedPosts = await getPosts(1000, 0, user.id)
-      setPosts(fetchedPosts)
-    } catch (error) {
-      console.error('Error toggling like:', error)
-      throw error
-    }
-  }
+  return (
+    <div className="h-screen flex flex-col overflow-hidden">
+      <Header />
 
-  const handleRetweet = async (postId: string) => {
-    if (!user?.id) return
-    
-    try {
-      await toggleRetweet(postId, user.id)
-      // Check current retweet status; if retweeted, move post to top
-      const status = await getUserInteractionStatus(postId, user.id)
-      if (status.isRetweeted) {
-        setPosts((prev) => {
-          const idx = prev.findIndex(p => p.id === postId)
-          if (idx === -1) return prev
-          const post = prev[idx]
-          const rest = [...prev.slice(0, idx), ...prev.slice(idx + 1)]
-          return [post, ...rest]
-        })
-      } else {
-        // If un-retweeted, refresh to restore natural order
-        const fetchedPosts = await getPosts(1000, 0, user.id)
-        setPosts(fetchedPosts)
-      }
-    } catch (error) {
-      console.error('Error toggling retweet:', error)
-      throw error
-    }
-  }
-
-  const handleBookmark = async (postId: string) => {
-    if (!user?.id) return
-    try {
-      await togglePostBookmark(postId, user.id)
-      // Refresh interaction status for this post
-      const fetchedPosts = await getPosts(1000, 0, user.id)
-      setPosts(fetchedPosts)
-    } catch (error) {
-      console.error('Error toggling bookmark:', error)
-      throw error
-    }
-  }
-
-  const handleComment = (postId: string) => {
-    console.log('Comment on post:', postId)
-  }
-
-      return (
-        <div className="h-screen flex flex-col overflow-hidden">
-          <Header />
-
-          <main className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-4 pt-4 sm:pt-6 pb-0 overflow-hidden min-h-0">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 h-full min-h-0">
-          {/* Left Sidebar */}
+      <main className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-4 pt-4 sm:pt-6 pb-0 overflow-hidden min-h-0">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 h-full min-h-0">
           <LeftSidebar />
 
-          {/* Main Feed */}
           <MainFeed
             posts={posts}
-            onPostCreated={handlePostCreated}
+            onPostCreated={refresh}
             isCreatePostCompact={isCreatePostCompact}
             setIsCreatePostCompact={setIsCreatePostCompact}
             onLike={handleLike}
@@ -150,16 +110,13 @@ export default function Home() {
             onBookmark={handleBookmark}
             onComment={handleComment}
             currentUserId={user.id}
-            onDelete={() => {
-              // Silme sonrası feed'i yenilemek için
-              handlePostCreated()
-            }}
+            onDelete={refresh}
           />
 
-          {/* Right Sidebar */}
           <RightSidebar />
         </div>
       </main>
     </div>
   )
 }
+
