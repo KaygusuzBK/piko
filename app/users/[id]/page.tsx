@@ -10,6 +10,7 @@ import { ArrowLeft } from 'lucide-react'
 import { ProfileHeader } from '@/components/profile/ProfileHeader'
 import { ProfileTabs } from '@/components/profile/ProfileTabs'
 import { ProfilePosts } from '@/components/profile/ProfilePosts'
+import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog'
 import { useUserProfile, useUpdateProfile, useImageUpload } from '@/hooks/useUserProfile'
 import { useUserPosts } from '@/hooks/usePosts'
 import { usePostInteractions } from '@/hooks/usePostInteractions'
@@ -44,6 +45,8 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
   const [activeTab, setActiveTab] = useState<'posts' | 'replies' | 'media' | 'likes' | 'favorites'>('posts')
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
   const [isCompact, setIsCompact] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [postToDelete, setPostToDelete] = useState<string | null>(null)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -274,13 +277,16 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
     }
   }
 
-  const handleDelete = async (postId: string) => {
-    if (!user?.id) return
+  const handleDelete = (postId: string) => {
+    setPostToDelete(postId)
+    setDeleteDialogOpen(true)
+  }
 
-    // Confirm deletion
-    if (!confirm('Bu gönderiyi silmek istediğinizden emin misiniz?')) {
-      return
-    }
+  const confirmDelete = async () => {
+    if (!user?.id || !postToDelete) return
+
+    // Close dialog
+    setDeleteDialogOpen(false)
 
     // Optimistic update - remove from all lists
     const updateAllLists = (filterFn: (post: PostWithAuthor) => boolean) => {
@@ -290,18 +296,18 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
       setMediaPosts(prev => prev.filter(filterFn))
     }
 
-    updateAllLists(post => post.id !== postId)
+    updateAllLists(post => post.id !== postToDelete)
 
     try {
-      const success = await deletePost(postId, user.id)
+      const success = await deletePost(postToDelete, user.id)
       if (!success) {
-        alert('Gönderi silinemedi. Lütfen tekrar deneyin.')
         refresh()
       }
     } catch (error) {
       console.error('Error deleting post:', error)
-      alert('Gönderi silinirken hata oluştu.')
       refresh()
+    } finally {
+      setPostToDelete(null)
     }
   }
 
@@ -334,59 +340,67 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
       : 'Henüz favori yok.'
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
-      <Header />
+    <>
+      <div className="h-screen flex flex-col overflow-hidden">
+        <Header />
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-4 pt-4 sm:pt-6 pb-0 overflow-hidden min-h-0">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 h-full min-h-0">
-          <LeftSidebar hideExtras />
+        <main className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-4 pt-4 sm:pt-6 pb-0 overflow-hidden min-h-0">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 h-full min-h-0">
+            <LeftSidebar hideExtras />
 
-          <div
-            ref={scrollContainerRef}
-            className="lg:col-span-3 h-full min-h-0 overflow-y-auto scrollbar-hide border-x border-border pb-20"
-          >
-            <div className="sticky top-0 z-10 bg-background/60 backdrop-blur px-3 sm:px-4 py-2 flex items-center space-x-4 border-b border-border">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => router.back()}
-                className="h-8 w-8"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div>
-                <h1 className="text-base sm:text-lg font-semibold">{dbUser.name || 'Kullanıcı'}</h1>
-                <p className="text-xs text-muted-foreground">
-                  {posts.length || 0} {posts.length === 1 ? 'gönderi' : 'gönderi'}
-                </p>
+            <div
+              ref={scrollContainerRef}
+              className="lg:col-span-3 h-full min-h-0 overflow-y-auto scrollbar-hide border-x border-border pb-20"
+            >
+              <div className="sticky top-0 z-10 bg-background/60 backdrop-blur px-3 sm:px-4 py-2 flex items-center space-x-4 border-b border-border">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => router.back()}
+                  className="h-8 w-8"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <div>
+                  <h1 className="text-base sm:text-lg font-semibold">{dbUser.name || 'Kullanıcı'}</h1>
+                  <p className="text-xs text-muted-foreground">
+                    {posts.length || 0} {posts.length === 1 ? 'gönderi' : 'gönderi'}
+                  </p>
+                </div>
               </div>
+
+              <ProfileHeader
+                user={dbUser}
+                isOwner={isOwner}
+                isCompact={isCompact}
+                onAvatarChange={handleAvatarChange}
+                onBannerChange={handleBannerChange}
+              />
+
+              <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
+
+              <ProfilePosts
+                posts={currentPosts}
+                loading={postsLoading}
+                emptyMessage={emptyMessage}
+                currentUserId={user.id}
+                onLike={handleLike}
+                onRetweet={handleRetweet}
+                onBookmark={handleBookmark}
+                onComment={() => {}}
+                onDelete={handleDelete}
+              />
             </div>
-
-            <ProfileHeader
-              user={dbUser}
-              isOwner={isOwner}
-              isCompact={isCompact}
-              onAvatarChange={handleAvatarChange}
-              onBannerChange={handleBannerChange}
-            />
-
-            <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
-
-            <ProfilePosts
-              posts={currentPosts}
-              loading={postsLoading}
-              emptyMessage={emptyMessage}
-              currentUserId={user.id}
-              onLike={handleLike}
-              onRetweet={handleRetweet}
-              onBookmark={handleBookmark}
-              onComment={() => {}}
-              onDelete={handleDelete}
-            />
           </div>
-        </div>
-      </main>
-    </div>
+        </main>
+      </div>
+
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={confirmDelete}
+      />
+    </>
   )
 }
 

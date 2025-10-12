@@ -7,6 +7,7 @@ import { Header } from '@/components/Header'
 import { MainFeed } from '@/components/MainFeed'
 import { LeftSidebar } from '@/components/LeftSidebar'
 import { RightSidebar } from '@/components/RightSidebar'
+import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog'
 import { useFeedPosts } from '@/hooks/usePosts'
 import { usePostInteractions } from '@/hooks/usePostInteractions'
 import { deletePost } from '@/lib/posts'
@@ -17,6 +18,8 @@ export default function Home() {
   const { posts, setPosts, refresh } = useFeedPosts(user?.id)
   const { toggleLike, toggleRetweet, toggleBookmark } = usePostInteractions()
   const [isCreatePostCompact, setIsCreatePostCompact] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [postToDelete, setPostToDelete] = useState<string | null>(null)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -161,30 +164,33 @@ export default function Home() {
     console.log('Comment on post:', postId)
   }, [])
 
-  const handleDelete = useCallback(async (postId: string) => {
-    if (!user?.id) return
+  const handleDelete = useCallback((postId: string) => {
+    setPostToDelete(postId)
+    setDeleteDialogOpen(true)
+  }, [])
 
-    // Confirm deletion
-    if (!confirm('Bu gönderiyi silmek istediğinizden emin misiniz?')) {
-      return
-    }
+  const confirmDelete = useCallback(async () => {
+    if (!user?.id || !postToDelete) return
+
+    // Close dialog
+    setDeleteDialogOpen(false)
 
     // Optimistic update - remove from UI immediately
-    setPosts(prevPosts => prevPosts.filter(post => post.id !== postId))
+    setPosts(prevPosts => prevPosts.filter(post => post.id !== postToDelete))
 
     try {
-      const success = await deletePost(postId, user.id)
+      const success = await deletePost(postToDelete, user.id)
       if (!success) {
         // Revert on error
-        alert('Gönderi silinemedi. Lütfen tekrar deneyin.')
         refresh()
       }
     } catch (error) {
       console.error('Error deleting post:', error)
-      alert('Gönderi silinirken hata oluştu.')
       refresh()
+    } finally {
+      setPostToDelete(null)
     }
-  }, [user?.id, setPosts, refresh])
+  }, [user?.id, postToDelete, setPosts, refresh])
 
   if (loading) {
     return (
@@ -199,30 +205,38 @@ export default function Home() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
-      <Header />
+    <>
+      <div className="h-screen flex flex-col overflow-hidden">
+        <Header />
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-4 pt-4 sm:pt-6 pb-0 overflow-hidden min-h-0">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 h-full min-h-0">
-          <LeftSidebar />
+        <main className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-4 pt-4 sm:pt-6 pb-0 overflow-hidden min-h-0">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 h-full min-h-0">
+            <LeftSidebar />
 
-          <MainFeed
-            posts={posts}
-            onPostCreated={refresh}
-            isCreatePostCompact={isCreatePostCompact}
-            setIsCreatePostCompact={setIsCreatePostCompact}
-            onLike={handleLike}
-            onRetweet={handleRetweet}
-            onBookmark={handleBookmark}
-            onComment={handleComment}
-            currentUserId={user.id}
-            onDelete={handleDelete}
-          />
+            <MainFeed
+              posts={posts}
+              onPostCreated={refresh}
+              isCreatePostCompact={isCreatePostCompact}
+              setIsCreatePostCompact={setIsCreatePostCompact}
+              onLike={handleLike}
+              onRetweet={handleRetweet}
+              onBookmark={handleBookmark}
+              onComment={handleComment}
+              currentUserId={user.id}
+              onDelete={handleDelete}
+            />
 
-          <RightSidebar />
-        </div>
-      </main>
-    </div>
+            <RightSidebar />
+          </div>
+        </main>
+      </div>
+
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={confirmDelete}
+      />
+    </>
   )
 }
 
