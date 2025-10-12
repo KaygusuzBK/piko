@@ -3,7 +3,7 @@ export type PostType = 'text' | 'media'
 export interface Post {
   id: string
   content: string
-  image_url?: string
+  image_urls?: string[]
   type: PostType
   author_id: string
   created_at: string
@@ -32,7 +32,7 @@ export interface InteractionStatus {
 
 export interface CreatePostData {
   content: string
-  image_url?: string
+  image_urls?: string[]
   type?: PostType
   author_id: string
 }

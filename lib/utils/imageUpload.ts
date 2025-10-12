@@ -103,3 +103,36 @@ export function validateImageFile(file: File, options: ImageUploadOptions = {}):
   return null
 }
 
+export async function uploadMultiplePostImages(
+  userId: string,
+  files: File[],
+  options: ImageUploadOptions = {}
+): Promise<string[]> {
+  const MAX_IMAGES = 4
+  
+  if (files.length > MAX_IMAGES) {
+    throw new Error(`En fazla ${MAX_IMAGES} resim yükleyebilirsiniz`)
+  }
+
+  const uploadPromises = files.map(file => uploadPostImage(userId, file, options))
+  
+  try {
+    const results = await Promise.all(uploadPromises)
+    return results.filter((url): url is string => url !== null)
+  } catch (error) {
+    console.error('Multiple image upload error:', error)
+    throw error
+  }
+}
+
+export async function deleteMultiplePostImages(imageUrls: string[]): Promise<boolean> {
+  try {
+    const deletePromises = imageUrls.map(url => deletePostImage(url))
+    const results = await Promise.all(deletePromises)
+    return results.every(result => result === true)
+  } catch (error) {
+    console.error('Multiple image delete error:', error)
+    return false
+  }
+}
+

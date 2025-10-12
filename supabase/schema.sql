@@ -50,7 +50,7 @@ END $$;
 CREATE TABLE IF NOT EXISTS posts (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   content TEXT NOT NULL CHECK (char_length(content) <= 280),
-  image_url TEXT,
+  image_urls TEXT[] DEFAULT ARRAY[]::TEXT[],
   type TEXT DEFAULT 'text' CHECK (type IN ('text', 'media')),
   author_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -60,9 +60,33 @@ CREATE TABLE IF NOT EXISTS posts (
   retweets_count INTEGER DEFAULT 0 CHECK (retweets_count >= 0)
 );
 
--- Add image_url and type columns if they don't exist (for existing tables)
-ALTER TABLE posts ADD COLUMN IF NOT EXISTS image_url TEXT;
-ALTER TABLE posts ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'text' CHECK (type IN ('text', 'media'));
+-- Migrate existing image_url to image_urls array (for existing tables)
+DO $$
+BEGIN
+  -- Add image_urls column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'posts' AND column_name = 'image_urls'
+  ) THEN
+    ALTER TABLE posts ADD COLUMN image_urls TEXT[] DEFAULT ARRAY[]::TEXT[];
+    
+    -- Migrate existing image_url data to image_urls array
+    UPDATE posts 
+    SET image_urls = ARRAY[image_url]::TEXT[]
+    WHERE image_url IS NOT NULL AND image_url != '';
+    
+    -- Drop old image_url column
+    ALTER TABLE posts DROP COLUMN IF EXISTS image_url;
+  END IF;
+  
+  -- Add type column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'posts' AND column_name = 'type'
+  ) THEN
+    ALTER TABLE posts ADD COLUMN type TEXT DEFAULT 'text' CHECK (type IN ('text', 'media'));
+  END IF;
+END $$;
 
 -- 4. Post interactions tablosu (beğeni, retweet, bookmark)
 CREATE TABLE IF NOT EXISTS post_interactions (

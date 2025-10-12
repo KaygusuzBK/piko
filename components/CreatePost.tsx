@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import { useAuthStore } from '@/stores/authStore'
 import { createPost, CreatePostData } from '@/lib/posts'
-import { uploadPostImage, validateImageFile } from '@/lib/utils/imageUpload'
+import { uploadMultiplePostImages, validateImageFile } from '@/lib/utils/imageUpload'
 import { Send, Image as ImageIcon, Zap, X } from 'lucide-react'
 import Image from 'next/image'
 
@@ -16,45 +16,67 @@ interface CreatePostProps {
   isCompact?: boolean
 }
 
+const MAX_IMAGES = 4
+
 export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps) {
   const { user } = useAuthStore()
   const [content, setContent] = useState('')
   const [isPosting, setIsPosting] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
-  const [selectedImage, setSelectedImage] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [selectedImages, setSelectedImages] = useState<File[]>([])
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [uploadError, setUploadError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Debug için
-  console.log('CreatePost isCompact:', isCompact, 'isFocused:', isFocused)
-
-
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
 
-    // Validate image
-    const error = validateImageFile(file)
-    if (error) {
-      setUploadError(error)
+    // Check total count
+    const totalImages = selectedImages.length + files.length
+    if (totalImages > MAX_IMAGES) {
+      setUploadError(`En fazla ${MAX_IMAGES} resim ekleyebilirsiniz`)
       return
     }
 
-    setUploadError(null)
-    setSelectedImage(file)
+    // Validate each file
+    const validFiles: File[] = []
+    const newPreviews: string[] = []
 
-    // Create preview
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string)
+    for (const file of files) {
+      const error = validateImageFile(file)
+      if (error) {
+        setUploadError(error)
+        return
+      }
+      validFiles.push(file)
     }
-    reader.readAsDataURL(file)
+
+    // Create previews
+    validFiles.forEach(file => {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        newPreviews.push(reader.result as string)
+        if (newPreviews.length === validFiles.length) {
+          setImagePreviews(prev => [...prev, ...newPreviews])
+        }
+      }
+      reader.readAsDataURL(file)
+    })
+
+    setUploadError(null)
+    setSelectedImages(prev => [...prev, ...validFiles])
   }
 
-  const handleRemoveImage = () => {
-    setSelectedImage(null)
-    setImagePreview(null)
+  const handleRemoveImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index))
+    setImagePreviews(prev => prev.filter((_, i) => i !== index))
+    setUploadError(null)
+  }
+
+  const handleRemoveAllImages = () => {
+    setSelectedImages([])
+    setImagePreviews([])
     setUploadError(null)
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
@@ -62,23 +84,23 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
   }
 
   const handlePost = async () => {
-    if ((!content.trim() && !selectedImage) || !user) return
+    if ((!content.trim() && selectedImages.length === 0) || !user) return
 
     setIsPosting(true)
     try {
-      let imageUrl: string | undefined
+      let imageUrls: string[] = []
 
-      // Upload image if selected
-      if (selectedImage) {
-        console.log('Uploading image...', selectedImage.name)
-        imageUrl = await uploadPostImage(user.id, selectedImage) || undefined
-        console.log('Image uploaded, URL:', imageUrl)
+      // Upload images if selected
+      if (selectedImages.length > 0) {
+        console.log('Uploading images...', selectedImages.map(f => f.name))
+        imageUrls = await uploadMultiplePostImages(user.id, selectedImages)
+        console.log('Images uploaded, URLs:', imageUrls)
       }
 
       const postData: CreatePostData = {
         content: content.trim(),
-        image_url: imageUrl,
-        type: imageUrl ? 'media' : 'text',
+        image_urls: imageUrls.length > 0 ? imageUrls : undefined,
+        type: imageUrls.length > 0 ? 'media' : 'text',
         author_id: user.id
       }
       
@@ -87,7 +109,7 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
       
       if (newPost) {
         setContent('')
-        handleRemoveImage()
+        handleRemoveAllImages()
         onPostCreated?.()
         console.log('Post created successfully:', newPost)
       } else {
@@ -157,12 +179,31 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
                   // Focus olduğunda: alt satırda butonlar - justify-between ile iki uzak köşe
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center space-x-2">
-                      <Button variant="ghost" size="icon" className="group h-6 w-6 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white active:text-pink-500 dark:active:text-pink-400">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleImageSelect}
+                        className="hidden"
+                      />
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={selectedImages.length >= MAX_IMAGES}
+                        className="group h-6 w-6 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white active:text-pink-500 dark:active:text-pink-400 disabled:opacity-50"
+                      >
                         <ImageIcon className="h-3 w-3 group-active:text-pink-500 dark:group-active:text-pink-400" aria-hidden="true" />
                       </Button>
                       <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white">
                         <Zap className="h-3 w-3" />
                       </Button>
+                      {selectedImages.length > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          {selectedImages.length}/{MAX_IMAGES}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center space-x-2">
                       <span className={`text-xs ${content.length > 250 ? 'text-red-400' : 'text-muted-foreground dark:text-white/60'}`}>
@@ -170,7 +211,7 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
                       </span>
                       <Button
                         onClick={handlePost}
-                        disabled={!content.trim() || isPosting || content.length > 280}
+                        disabled={(!content.trim() && selectedImages.length === 0) || isPosting || content.length > 280}
                         size="sm"
                         className="px-2 text-xs h-6 bg-primary hover:bg-primary/90 text-primary-foreground font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       >
@@ -181,7 +222,21 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
                 ) : (
                   // Focus olmadığında: tüm iconlar sağ köşede
                   <div className="flex items-center justify-end w-full space-x-1">
-                    <Button variant="ghost" size="icon" className="group h-6 w-6 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white active:text-pink-500 dark:active:text-pink-400">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageSelect}
+                      className="hidden"
+                    />
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={selectedImages.length >= MAX_IMAGES}
+                      className="group h-6 w-6 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white active:text-pink-500 dark:active:text-pink-400 disabled:opacity-50"
+                    >
                       <ImageIcon className="h-4 w-4 group-active:text-pink-500 dark:group-active:text-pink-400" aria-hidden="true" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white">
@@ -192,7 +247,7 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
                     </span>
                     <Button
                       onClick={handlePost}
-                      disabled={!content.trim() || isPosting || content.length > 280}
+                      disabled={(!content.trim() && selectedImages.length === 0) || isPosting || content.length > 280}
                       size="sm"
                       className="px-2 text-xs h-6 bg-primary hover:bg-primary/90 text-primary-foreground font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -217,25 +272,39 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
                   maxLength={280}
                 />
                 
-                {/* Image Preview */}
-                {imagePreview && (
-                  <div className="relative w-full mb-2">
-                    <div className="relative w-full h-48 rounded-lg overflow-hidden border border-border">
-                      <Image
-                        src={imagePreview}
-                        alt="Preview"
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <Button
-                      onClick={handleRemoveImage}
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-2 right-2 h-6 w-6 rounded-full"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                {/* Multiple Image Previews */}
+                {imagePreviews.length > 0 && (
+                  <div className={`w-full mb-2 grid gap-2 ${
+                    imagePreviews.length === 1 ? 'grid-cols-1' :
+                    imagePreviews.length === 2 ? 'grid-cols-2' :
+                    imagePreviews.length === 3 ? 'grid-cols-2' :
+                    'grid-cols-2'
+                  }`}>
+                    {imagePreviews.map((preview, index) => (
+                      <div 
+                        key={index} 
+                        className={`relative rounded-lg overflow-hidden border border-border ${
+                          imagePreviews.length === 3 && index === 0 ? 'col-span-2' : ''
+                        }`}
+                      >
+                        <div className="relative w-full" style={{ aspectRatio: imagePreviews.length === 1 ? '16/9' : '1/1' }}>
+                          <Image
+                            src={preview}
+                            alt={`Preview ${index + 1}`}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                        <Button
+                          onClick={() => handleRemoveImage(index)}
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 right-2 h-6 w-6 rounded-full shadow-lg"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                 )}
 
@@ -250,6 +319,7 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
                       ref={fileInputRef}
                       type="file"
                       accept="image/*"
+                      multiple
                       onChange={handleImageSelect}
                       className="hidden"
                     />
@@ -257,10 +327,11 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
                       variant="ghost" 
                       size="icon" 
                       onClick={() => fileInputRef.current?.click()}
-                      className="group h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white active:text-pink-500 dark:active:text-pink-400 transition-all duration-200 hover:scale-110"
+                      disabled={selectedImages.length >= MAX_IMAGES}
+                      className="group h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white active:text-pink-500 dark:active:text-pink-400 transition-all duration-200 hover:scale-110 disabled:opacity-50"
                     >
                       <ImageIcon className="h-3 w-3 transition-transform duration-200 hover:rotate-12 group-active:text-pink-500 dark:group-active:text-pink-400" aria-hidden="true" />
-                      <span className="sr-only">Resim ekle</span>
+                      <span className="sr-only">Resim ekle ({selectedImages.length}/{MAX_IMAGES})</span>
                     </Button>
                     <Button variant="ghost" size="icon" className="h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white transition-all duration-200 hover:scale-110">
                       <Zap className="h-3 w-3 transition-transform duration-200 hover:scale-125" />
@@ -275,7 +346,7 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
                     <Separator orientation="vertical" className="h-2 sm:h-3" />
                     <Button
                       onClick={handlePost}
-                      disabled={(!content.trim() && !selectedImage) || isPosting || content.length > 280}
+                      disabled={(!content.trim() && selectedImages.length === 0) || isPosting || content.length > 280}
                       size="sm"
                       className="px-2 sm:px-3 text-xs h-6 sm:h-7 bg-primary hover:bg-primary/90 text-primary-foreground font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105"
                     >

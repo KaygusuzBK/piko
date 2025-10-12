@@ -133,18 +133,32 @@ export function PostCard({
 
             <PostContent content={post.content} />
 
-            {/* Post Image */}
-            {post.image_url && (
-              <div className="relative w-full mt-2 rounded-lg overflow-hidden border border-border/50">
-                <div className="relative w-full" style={{ aspectRatio: '16/9' }}>
-                  <Image
-                    src={post.image_url}
-                    alt="Post image"
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  />
-                </div>
+            {/* Multiple Post Images */}
+            {post.image_urls && post.image_urls.length > 0 && (
+              <div className={`w-full mt-2 grid gap-2 ${
+                post.image_urls.length === 1 ? 'grid-cols-1' :
+                post.image_urls.length === 2 ? 'grid-cols-2' :
+                post.image_urls.length === 3 ? 'grid-cols-2' :
+                'grid-cols-2'
+              }`}>
+                {post.image_urls.map((imageUrl, index) => (
+                  <div 
+                    key={index} 
+                    className={`relative rounded-lg overflow-hidden border border-border/50 ${
+                      post.image_urls!.length === 3 && index === 0 ? 'col-span-2' : ''
+                    }`}
+                  >
+                    <div className="relative w-full" style={{ aspectRatio: post.image_urls!.length === 1 ? '16/9' : '1/1' }}>
+                      <Image
+                        src={imageUrl}
+                        alt={`Post image ${index + 1}`}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 

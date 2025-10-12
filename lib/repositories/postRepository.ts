@@ -12,7 +12,7 @@ export class PostRepository {
         .insert([{
           content: data.content,
           author_id: data.author_id,
-          image_url: data.image_url,
+          image_urls: data.image_urls || [],
           type: data.type || 'text',
           likes_count: 0,
           comments_count: 0,
