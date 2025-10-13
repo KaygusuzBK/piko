@@ -73,6 +73,11 @@ export class PostQueryService {
     return this.fetchPostsWithInteractions({ authorId: userId, type: 'media', limit, offset }, viewerUserId)
   }
 
+  async getUserAllPosts(userId: string, limit: number = 100, offset: number = 0, viewerUserId?: string): Promise<PostWithAuthor[]> {
+    // Tek bir büyük query ile kullanıcının tüm gönderilerini al
+    return this.fetchPostsWithInteractions({ authorId: userId, limit: limit * 4, offset }, viewerUserId)
+  }
+
   async getPostById(postId: string, viewerUserId?: string): Promise<PostWithAuthor | null> {
     try {
       const posts = await postRepository.fetchPostById(postId)

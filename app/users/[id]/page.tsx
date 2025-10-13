@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState, useRef, use as usePromise } from 'react'
 import { Header } from '@/components/Header'
 import { LeftSidebar } from '@/components/LeftSidebar'
+import { RightSidebar } from '@/components/RightSidebar'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import { ProfileHeader } from '@/components/profile/ProfileHeader'
@@ -15,7 +16,6 @@ import { useUserProfile, useUpdateProfile, useImageUpload } from '@/hooks/useUse
 import { useUserPosts } from '@/hooks/usePosts'
 import { usePostInteractions } from '@/hooks/usePostInteractions'
 import { deletePost } from '@/lib/posts'
-import { PostWithAuthor } from '@/lib/types'
 
 interface UserDetailPageProps {
   params: Promise<{ id: string }>
@@ -55,20 +55,21 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
   }, [user, loading, router])
 
   useEffect(() => {
-    const el = scrollContainerRef.current
-    if (!el) return
-
-    const onScroll = () => {
-      const threshold = 40
-      setIsCompact(el.scrollTop > threshold)
+    const handleScroll = () => {
+      if (scrollContainerRef.current) {
+        const scrollTop = scrollContainerRef.current.scrollTop
+        setIsCompact(scrollTop > 100)
+      }
     }
 
-    el.addEventListener('scroll', onScroll)
-    return () => el.removeEventListener('scroll', onScroll)
+    const scrollContainer = scrollContainerRef.current
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll)
+      return () => scrollContainer.removeEventListener('scroll', handleScroll)
+    }
   }, [])
 
   const handleAvatarChange = async (file: File) => {
-    if (!user?.id) return
     const url = await uploadAvatar(file)
     if (url) {
       const updated = await updateProfile({ avatar_url: url })
@@ -77,7 +78,6 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
   }
 
   const handleBannerChange = async (file: File) => {
-    if (!user?.id) return
     const url = await uploadBanner(file)
     if (url) {
       const updated = await updateProfile({ banner_url: url })
@@ -85,86 +85,40 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
     }
   }
 
-  const updatePostInAllLists = (postId: string, updateFn: (post: PostWithAuthor) => PostWithAuthor) => {
-    setPosts(prev => prev.map(p => p.id === postId ? updateFn(p) : p))
-    setLikedPosts(prev => prev.map(p => p.id === postId ? updateFn(p) : p))
-    setFavoritePosts(prev => prev.map(p => p.id === postId ? updateFn(p) : p))
-    setMediaPosts(prev => prev.map(p => p.id === postId ? updateFn(p) : p))
+  const updatePostInAllLists = (postId: string, updates: Record<string, unknown>) => {
+    setPosts(prev => prev.map(post => post.id === postId ? { ...post, ...updates } : post))
+    setLikedPosts(prev => prev.map(post => post.id === postId ? { ...post, ...updates } : post))
+    setFavoritePosts(prev => prev.map(post => post.id === postId ? { ...post, ...updates } : post))
+    setMediaPosts(prev => prev.map(post => post.id === postId ? { ...post, ...updates } : post))
   }
 
   const handleLike = async (postId: string) => {
     if (!user?.id) return
     
-    const post = [...posts, ...likedPosts, ...favoritePosts, ...mediaPosts].find(p => p.id === postId)
-    const isCurrentlyLiked = post?.user_interaction_status?.isLiked || false
+    const currentPost = posts.find(p => p.id === postId)
+    if (!currentPost) return
     
-    // If unliking from "Beğeniler" tab, remove from list
-    if (isCurrentlyLiked && activeTab === 'likes') {
-      setLikedPosts(prev => prev.filter(p => p.id !== postId))
-      // Update in other lists
-      setPosts(prev => prev.map(p => p.id === postId ? {
-        ...p,
-        likes_count: p.likes_count - 1,
-        user_interaction_status: {
-          isLiked: false,
-          isRetweeted: p.user_interaction_status?.isRetweeted || false,
-          isBookmarked: p.user_interaction_status?.isBookmarked || false
-        }
-      } : p))
-      setFavoritePosts(prev => prev.map(p => p.id === postId ? {
-        ...p,
-        likes_count: p.likes_count - 1,
-        user_interaction_status: {
-          isLiked: false,
-          isRetweeted: p.user_interaction_status?.isRetweeted || false,
-          isBookmarked: p.user_interaction_status?.isBookmarked || false
-        }
-      } : p))
-      setMediaPosts(prev => prev.map(p => p.id === postId ? {
-        ...p,
-        likes_count: p.likes_count - 1,
-        user_interaction_status: {
-          isLiked: false,
-          isRetweeted: p.user_interaction_status?.isRetweeted || false,
-          isBookmarked: p.user_interaction_status?.isBookmarked || false
-        }
-      } : p))
-    } else {
-      // Normal optimistic update
-      updatePostInAllLists(postId, (post) => {
-        const isLiked = post.user_interaction_status?.isLiked || false
-        return {
-          ...post,
-          likes_count: isLiked ? post.likes_count - 1 : post.likes_count + 1,
-          user_interaction_status: {
-            isLiked: !isLiked,
-            isRetweeted: post.user_interaction_status?.isRetweeted || false,
-            isBookmarked: post.user_interaction_status?.isBookmarked || false
-          }
-        }
-      })
-    }
+    // Optimistic update
+    updatePostInAllLists(postId, {
+      user_interaction_status: {
+        isLiked: true,
+        isRetweeted: false,
+        isBookmarked: false
+      },
+      likes_count: currentPost.likes_count + 1
+    })
     
     try {
       await toggleLike(postId, user.id)
     } catch {
       // Revert on error
-      if (isCurrentlyLiked && activeTab === 'likes') {
-        // Re-add to liked posts
-        if (post) {
-          setLikedPosts(prev => [post, ...prev])
-        }
-      }
-      updatePostInAllLists(postId, (post) => {
-        return {
-          ...post,
-          likes_count: isCurrentlyLiked ? post.likes_count + 1 : post.likes_count - 1,
-          user_interaction_status: {
-            isLiked: isCurrentlyLiked,
-            isRetweeted: post.user_interaction_status?.isRetweeted || false,
-            isBookmarked: post.user_interaction_status?.isBookmarked || false
-          }
-        }
+      updatePostInAllLists(postId, {
+        user_interaction_status: {
+          isLiked: false,
+          isRetweeted: false,
+          isBookmarked: false
+        },
+        likes_count: currentPost.likes_count
       })
     }
   }
@@ -172,35 +126,30 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
   const handleRetweet = async (postId: string) => {
     if (!user?.id) return
     
+    const currentPost = posts.find(p => p.id === postId)
+    if (!currentPost) return
+    
     // Optimistic update
-    updatePostInAllLists(postId, (post) => {
-      const isCurrentlyRetweeted = post.user_interaction_status?.isRetweeted || false
-      return {
-        ...post,
-        retweets_count: isCurrentlyRetweeted ? post.retweets_count - 1 : post.retweets_count + 1,
-        user_interaction_status: {
-          isLiked: post.user_interaction_status?.isLiked || false,
-          isRetweeted: !isCurrentlyRetweeted,
-          isBookmarked: post.user_interaction_status?.isBookmarked || false
-        }
-      }
+    updatePostInAllLists(postId, {
+      user_interaction_status: {
+        isLiked: false,
+        isRetweeted: true,
+        isBookmarked: false
+      },
+      retweets_count: currentPost.retweets_count + 1
     })
     
     try {
       await toggleRetweet(postId, user.id)
     } catch {
       // Revert on error
-      updatePostInAllLists(postId, (post) => {
-        const isCurrentlyRetweeted = post.user_interaction_status?.isRetweeted || false
-        return {
-          ...post,
-          retweets_count: isCurrentlyRetweeted ? post.retweets_count - 1 : post.retweets_count + 1,
-          user_interaction_status: {
-            isLiked: post.user_interaction_status?.isLiked || false,
-            isRetweeted: !isCurrentlyRetweeted,
-            isBookmarked: post.user_interaction_status?.isBookmarked || false
-          }
-        }
+      updatePostInAllLists(postId, {
+        user_interaction_status: {
+          isLiked: false,
+          isRetweeted: false,
+          isBookmarked: false
+        },
+        retweets_count: currentPost.retweets_count
       })
     }
   }
@@ -208,70 +157,24 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
   const handleBookmark = async (postId: string) => {
     if (!user?.id) return
     
-    const post = [...posts, ...likedPosts, ...favoritePosts, ...mediaPosts].find(p => p.id === postId)
-    const isCurrentlyBookmarked = post?.user_interaction_status?.isBookmarked || false
-    
-    // If removing bookmark from "Favoriler" tab, remove from list
-    if (isCurrentlyBookmarked && activeTab === 'favorites') {
-      setFavoritePosts(prev => prev.filter(p => p.id !== postId))
-      // Update in other lists
-      setPosts(prev => prev.map(p => p.id === postId ? {
-        ...p,
-        user_interaction_status: {
-          isLiked: p.user_interaction_status?.isLiked || false,
-          isRetweeted: p.user_interaction_status?.isRetweeted || false,
-          isBookmarked: false
-        }
-      } : p))
-      setLikedPosts(prev => prev.map(p => p.id === postId ? {
-        ...p,
-        user_interaction_status: {
-          isLiked: p.user_interaction_status?.isLiked || false,
-          isRetweeted: p.user_interaction_status?.isRetweeted || false,
-          isBookmarked: false
-        }
-      } : p))
-      setMediaPosts(prev => prev.map(p => p.id === postId ? {
-        ...p,
-        user_interaction_status: {
-          isLiked: p.user_interaction_status?.isLiked || false,
-          isRetweeted: p.user_interaction_status?.isRetweeted || false,
-          isBookmarked: false
-        }
-      } : p))
-    } else {
-      // Normal optimistic update
-      updatePostInAllLists(postId, (post) => {
-        const isBookmarked = post.user_interaction_status?.isBookmarked || false
-        return {
-          ...post,
-          user_interaction_status: {
-            isLiked: post.user_interaction_status?.isLiked || false,
-            isRetweeted: post.user_interaction_status?.isRetweeted || false,
-            isBookmarked: !isBookmarked
-          }
-        }
-      })
-    }
+    // Optimistic update
+    updatePostInAllLists(postId, {
+      user_interaction_status: {
+        isLiked: false,
+        isRetweeted: false,
+        isBookmarked: true
+      }
+    })
     
     try {
       await toggleBookmark(postId, user.id)
     } catch {
       // Revert on error
-      if (isCurrentlyBookmarked && activeTab === 'favorites') {
-        // Re-add to favorites
-        if (post) {
-          setFavoritePosts(prev => [post, ...prev])
-        }
-      }
-      updatePostInAllLists(postId, (post) => {
-        return {
-          ...post,
-          user_interaction_status: {
-            isLiked: post.user_interaction_status?.isLiked || false,
-            isRetweeted: post.user_interaction_status?.isRetweeted || false,
-            isBookmarked: isCurrentlyBookmarked
-          }
+      updatePostInAllLists(postId, {
+        user_interaction_status: {
+          isLiked: false,
+          isRetweeted: false,
+          isBookmarked: false
         }
       })
     }
@@ -282,25 +185,26 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
     setDeleteDialogOpen(true)
   }
 
+  const handleComment = () => {
+    console.log('Comment functionality')
+  }
+
   const confirmDelete = async () => {
     if (!user?.id || !postToDelete) return
 
     // Close dialog
     setDeleteDialogOpen(false)
 
-    // Optimistic update - remove from all lists
-    const updateAllLists = (filterFn: (post: PostWithAuthor) => boolean) => {
-      setPosts(prev => prev.filter(filterFn))
-      setLikedPosts(prev => prev.filter(filterFn))
-      setFavoritePosts(prev => prev.filter(filterFn))
-      setMediaPosts(prev => prev.filter(filterFn))
-    }
-
-    updateAllLists(post => post.id !== postToDelete)
+    // Optimistic update - remove from UI immediately
+    setPosts(prevPosts => prevPosts.filter(post => post.id !== postToDelete))
+    setLikedPosts(prevPosts => prevPosts.filter(post => post.id !== postToDelete))
+    setFavoritePosts(prevPosts => prevPosts.filter(post => post.id !== postToDelete))
+    setMediaPosts(prevPosts => prevPosts.filter(post => post.id !== postToDelete))
 
     try {
       const success = await deletePost(postToDelete, user.id)
       if (!success) {
+        // Revert on error
         refresh()
       }
     } catch (error) {
@@ -323,21 +227,39 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
     return null
   }
 
-  const isOwner = user.id === dbUser.id
+  const currentPosts = (() => {
+    switch (activeTab) {
+      case 'posts':
+        return posts
+      case 'replies':
+        return posts.filter(post => post.content.includes('@'))
+      case 'media':
+        return mediaPosts
+      case 'likes':
+        return likedPosts
+      case 'favorites':
+        return favoritePosts
+      default:
+        return posts
+    }
+  })()
 
-  const currentPosts = 
-    activeTab === 'posts' ? posts 
-    : activeTab === 'likes' ? likedPosts 
-    : activeTab === 'media' ? mediaPosts
-    : favoritePosts
-  const emptyMessage =
-    activeTab === 'posts'
-      ? 'Henüz gönderi yok.'
-      : activeTab === 'likes'
-      ? 'Henüz beğeni yok.'
-      : activeTab === 'media'
-      ? 'Henüz medya yok.'
-      : 'Henüz favori yok.'
+  const emptyMessage = (() => {
+    switch (activeTab) {
+      case 'posts':
+        return user.id === paramsId ? 'Henüz gönderi paylaşmadın' : 'Bu kullanıcı henüz gönderi paylaşmamış'
+      case 'replies':
+        return user.id === paramsId ? 'Henüz yanıt vermedin' : 'Bu kullanıcı henüz yanıt vermemiş'
+      case 'media':
+        return user.id === paramsId ? 'Henüz medya paylaşmadın' : 'Bu kullanıcı henüz medya paylaşmamış'
+      case 'likes':
+        return user.id === paramsId ? 'Henüz beğendiğin gönderi yok' : 'Bu kullanıcı henüz hiçbir gönderiyi beğenmemiş'
+      case 'favorites':
+        return user.id === paramsId ? 'Henüz kaydettiğin gönderi yok' : 'Bu kullanıcı henüz hiçbir gönderiyi kaydetmemiş'
+      default:
+        return 'Gönderi bulunamadı'
+    }
+  })()
 
   return (
     <>
@@ -346,52 +268,59 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
 
         <main className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-4 pt-4 sm:pt-6 pb-0 overflow-hidden min-h-0">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 h-full min-h-0">
-            <LeftSidebar hideExtras />
+            <LeftSidebar />
 
-            <div
-              ref={scrollContainerRef}
-              className="lg:col-span-3 h-full min-h-0 overflow-y-auto scrollbar-hide border-x border-border pb-20"
-            >
-              <div className="sticky top-0 z-10 bg-background/60 backdrop-blur px-3 sm:px-4 py-2 flex items-center space-x-4 border-b border-border">
+            <div className="lg:col-span-2 flex flex-col min-h-0">
+              <div className="flex items-center gap-4 mb-4 sm:mb-6">
                 <Button
                   variant="ghost"
-                  size="icon"
+                  size="sm"
                   onClick={() => router.back()}
-                  className="h-8 w-8"
+                  className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
                 >
-                  <ArrowLeft className="h-5 w-5" />
+                  <ArrowLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline">Geri</span>
                 </Button>
-                <div>
-                  <h1 className="text-base sm:text-lg font-semibold">{dbUser.name || 'Kullanıcı'}</h1>
-                  <p className="text-xs text-muted-foreground">
-                    {posts.length || 0} {posts.length === 1 ? 'gönderi' : 'gönderi'}
-                  </p>
+                <div className="flex flex-col">
+                  <h1 className="text-xl font-bold">{dbUser.name}</h1>
+                  <p className="text-sm text-muted-foreground">@{dbUser.username}</p>
                 </div>
               </div>
 
-              <ProfileHeader
-                user={dbUser}
-                isOwner={isOwner}
-                isCompact={isCompact}
-                currentUserId={user?.id}
-                onAvatarChange={handleAvatarChange}
-                onBannerChange={handleBannerChange}
-              />
+              <div className="flex-1 flex flex-col min-h-0">
+                <div className="relative">
+                  <ProfileHeader
+                    user={dbUser}
+                    currentUserId={user.id}
+                    isOwner={user.id === paramsId}
+                    isCompact={isCompact}
+                    onAvatarChange={handleAvatarChange}
+                    onBannerChange={handleBannerChange}
+                  />
 
-              <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
+                  <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
+                </div>
 
-              <ProfilePosts
-                posts={currentPosts}
-                loading={postsLoading}
-                emptyMessage={emptyMessage}
-                currentUserId={user.id}
-                onLike={handleLike}
-                onRetweet={handleRetweet}
-                onBookmark={handleBookmark}
-                onComment={() => {}}
-                onDelete={handleDelete}
-              />
+                <div 
+                  ref={scrollContainerRef}
+                  className="flex-1 overflow-y-auto"
+                >
+                  <ProfilePosts
+                    posts={currentPosts}
+                    loading={postsLoading}
+                    emptyMessage={emptyMessage}
+                    onLike={handleLike}
+                    onRetweet={handleRetweet}
+                    onBookmark={handleBookmark}
+                    onComment={handleComment}
+                    currentUserId={user.id}
+                    onDelete={handleDelete}
+                  />
+                </div>
+              </div>
             </div>
+
+            <RightSidebar />
           </div>
         </main>
       </div>
@@ -404,4 +333,3 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
     </>
   )
 }
-
