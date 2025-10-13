@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Turbopack konfigürasyonu
+  turbopack: {
+    root: __dirname,
+  },
 };
 
 const pwaConfig = withPWA({
