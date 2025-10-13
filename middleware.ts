@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
 import { securityMiddleware } from './lib/middleware/securityMiddleware';
 import { analyticsMiddleware } from './lib/middleware/analyticsMiddleware';
 import { apiMiddleware } from './lib/middleware/apiMiddleware';
@@ -94,41 +93,27 @@ async function checkAuthentication(request: NextRequest) {
   // Giriş yapmış kullanıcılar için yasak rotalar
   const authRoutes = ['/login'];
   
-  // Supabase client oluştur
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
-        },
-      },
-    }
-  );
+  // Supabase auth cookie'lerini kontrol et
+  const accessToken = request.cookies.get('sb-access-token')?.value;
+  const refreshToken = request.cookies.get('sb-refresh-token')?.value;
   
-  try {
-    // Kullanıcı oturumunu kontrol et
-    const { data: { user }, error } = await supabase.auth.getUser();
-    
-    // Korumalı rotalar için kimlik doğrulama kontrolü
-    if (protectedRoutes.some(route => pathname.startsWith(route))) {
-      if (!user || error) {
-        console.log(`🚫 Yetkisiz erişim: ${pathname}`);
-        return NextResponse.redirect(new URL('/login', request.url));
-      }
+  // Basit cookie kontrolü - token varsa kullanıcı giriş yapmış sayılır
+  const isAuthenticated = !!(accessToken && refreshToken);
+  
+  // Korumalı rotalar için kimlik doğrulama kontrolü
+  if (protectedRoutes.some(route => pathname.startsWith(route))) {
+    if (!isAuthenticated) {
+      console.log(`🚫 Yetkisiz erişim: ${pathname}`);
+      return NextResponse.redirect(new URL('/login', request.url));
     }
-    
-    // Giriş yapmış kullanıcılar için auth rotalarını yasakla
-    if (authRoutes.some(route => pathname.startsWith(route))) {
-      if (user && !error) {
-        console.log(`🔄 Giriş yapmış kullanıcı yönlendiriliyor: ${pathname}`);
-        return NextResponse.redirect(new URL('/', request.url));
-      }
+  }
+  
+  // Giriş yapmış kullanıcılar için auth rotalarını yasakla
+  if (authRoutes.some(route => pathname.startsWith(route))) {
+    if (isAuthenticated) {
+      console.log(`🔄 Giriş yapmış kullanıcı yönlendiriliyor: ${pathname}`);
+      return NextResponse.redirect(new URL('/', request.url));
     }
-    
-  } catch (error) {
-    console.error('❌ Auth kontrolü hatası:', error);
   }
   
   return null;
