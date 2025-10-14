@@ -29,12 +29,17 @@ export function useInfinitePosts({
   } = useInfiniteQuery({
     queryKey: userId ? queryKeys.posts.user(userId, viewerUserId) : queryKeys.posts.feed(viewerUserId),
     queryFn: async ({ pageParam = 0 }) => {
-      if (userId) {
-        const result = await postQueryService.getUserPosts(userId, limit, pageParam, viewerUserId)
+      try {
+        if (userId) {
+          const result = await postQueryService.getUserPosts(userId, limit, pageParam, viewerUserId)
+          return Array.isArray(result) ? result : []
+        }
+        const result = await postQueryService.getFeedPosts(limit, pageParam, viewerUserId)
         return Array.isArray(result) ? result : []
+      } catch (error) {
+        console.error('Error fetching posts:', error)
+        return []
       }
-      const result = await postQueryService.getFeedPosts(limit, pageParam, viewerUserId)
-      return Array.isArray(result) ? result : []
     },
     getNextPageParam: (lastPage, allPages) => {
       if (!lastPage || !Array.isArray(lastPage) || lastPage.length < limit) {
@@ -45,6 +50,10 @@ export function useInfinitePosts({
     initialPageParam: 0,
     enabled,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+    retryDelay: 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
   })
 
   const posts = (data?.pages?.flat() ?? []) as PostWithAuthor[]
