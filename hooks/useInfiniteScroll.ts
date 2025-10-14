@@ -18,15 +18,7 @@ export function useInfinitePosts({
   limit = 20,
   enabled = true
 }: UseInfinitePostsOptions = {}) {
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage = false,
-    isFetchingNextPage = false,
-    isLoading = false,
-    error,
-    refetch
-  } = useInfiniteQuery({
+  const queryResult = useInfiniteQuery({
     queryKey: userId ? queryKeys.posts.user(userId, viewerUserId) : queryKeys.posts.feed(viewerUserId),
     queryFn: async ({ pageParam = 0 }) => {
       try {
@@ -55,6 +47,16 @@ export function useInfinitePosts({
     refetchOnWindowFocus: false,
     refetchOnReconnect: true,
   })
+
+  const {
+    data = { pages: [] },
+    fetchNextPage = () => {},
+    hasNextPage = false,
+    isFetchingNextPage = false,
+    isLoading = false,
+    error,
+    refetch = () => {}
+  } = queryResult || {}
 
   const posts = (data?.pages?.flat() ?? []) as PostWithAuthor[]
   const loadMoreRef = useRef<HTMLDivElement>(null)
