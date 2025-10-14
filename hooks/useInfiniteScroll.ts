@@ -21,9 +21,9 @@ export function useInfinitePosts({
   const {
     data,
     fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
+    hasNextPage = false,
+    isFetchingNextPage = false,
+    isLoading = false,
     error,
     refetch
   } = useInfiniteQuery({
@@ -92,6 +92,6 @@ export function useInfiniteFeedPosts(
   return useInfinitePosts({
     viewerUserId,
     limit,
-    enabled: !!viewerUserId
+    enabled: true // Her zaman aktif olsun
   })
 }
