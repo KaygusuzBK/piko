@@ -40,14 +40,14 @@ export function useInfinitePosts({
       if (!lastPage || !Array.isArray(lastPage) || lastPage.length < limit) {
         return undefined
       }
-      return allPages.length * limit
+      return (allPages?.length ?? 0) * limit
     },
     initialPageParam: 0,
     enabled,
     staleTime: 5 * 60 * 1000, // 5 minutes
   })
 
-  const posts = (data?.pages.flat() ?? []) as PostWithAuthor[]
+  const posts = (data?.pages?.flat() ?? []) as PostWithAuthor[]
   const loadMoreRef = useRef<HTMLDivElement>(null)
 
   const { ref, entry } = useIntersection({
