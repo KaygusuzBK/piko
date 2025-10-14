@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   toggleFollow as toggleFollowService,
   checkFollowStatus,
@@ -128,31 +129,12 @@ export function useFollowing(userId: string, currentUserId?: string, limit = 50)
  * Hook for getting follow suggestions
  */
 export function useFollowSuggestions(currentUserId: string | undefined, limit = 5) {
-  const [suggestions, setSuggestions] = useState<FollowUser[]>([])
-  const [loading, setLoading] = useState(true)
-
-  const fetchSuggestions = useCallback(async () => {
-    if (!currentUserId) {
-      setLoading(false)
-      return
-    }
-
-    setLoading(true)
-    try {
-      const data = await getFollowSuggestionsService(currentUserId, limit)
-      setSuggestions(data)
-    } catch (error) {
-      console.error('Error fetching follow suggestions:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [currentUserId, limit])
-
-  useEffect(() => {
-    fetchSuggestions()
-  }, [fetchSuggestions])
-
-  return { suggestions, loading, refresh: fetchSuggestions }
+  return useQuery({
+    queryKey: ['followSuggestions', currentUserId, limit],
+    queryFn: () => getFollowSuggestionsService(currentUserId!, limit),
+    enabled: !!currentUserId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  })
 }
 
 /**

@@ -1,42 +1,73 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { PostWithAuthor } from '@/lib/types'
 import { postQueryService } from '@/lib/services/postQueryService'
+import { queryKeys } from '@/lib/utils/queryClient'
 
 export function useFeedPosts(userId?: string, limit: number = 1000) {
+  const queryClient = useQueryClient()
   const [posts, setPosts] = useState<PostWithAuthor[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const loadPosts = useCallback(async () => {
-    if (!userId) return
-
-    setLoading(true)
-    setError(null)
-    try {
-      const fetchedPosts = await postQueryService.getFeedPosts(limit, 0, userId)
-      setPosts(fetchedPosts)
-    } catch (err) {
-      setError('Failed to load posts')
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }, [userId, limit])
+  const {
+    data: fetchedPosts,
+    isLoading,
+    error: queryError,
+    refetch
+  } = useQuery({
+    queryKey: queryKeys.posts.feed(userId),
+    queryFn: () => postQueryService.getFeedPosts(limit, 0, userId),
+    enabled: !!userId,
+    staleTime: 30 * 1000, // 30 saniye
+    refetchInterval: 60 * 1000, // Her 60 saniyede bir yenile
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true
+  })
 
   useEffect(() => {
-    loadPosts()
-  }, [loadPosts])
+    if (fetchedPosts && Array.isArray(fetchedPosts)) {
+      setPosts(fetchedPosts)
+      setLoading(false)
+    }
+  }, [fetchedPosts])
+
+  useEffect(() => {
+    if (queryError) {
+      setError('Failed to load posts')
+      setLoading(false)
+    }
+  }, [queryError])
+
+  useEffect(() => {
+    setLoading(isLoading)
+  }, [isLoading])
 
   const refresh = useCallback(() => {
-    loadPosts()
-  }, [loadPosts])
+    refetch()
+  }, [refetch])
+
+  const addNewPost = useCallback((newPost: PostWithAuthor) => {
+    // Yeni post'u en üste ekle
+    setPosts(prevPosts => [newPost, ...prevPosts])
+    
+    // Query cache'i de güncelle
+    queryClient.setQueryData(
+      queryKeys.posts.feed(userId),
+      (oldData: PostWithAuthor[] | undefined) => {
+        if (!oldData) return [newPost]
+        return [newPost, ...oldData]
+      }
+    )
+  }, [queryClient, userId])
 
   return {
     posts,
     setPosts,
     loading,
     error,
-    refresh
+    refresh,
+    addNewPost
   }
 }
 

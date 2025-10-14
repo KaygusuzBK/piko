@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { useAuthStore } from '@/stores/authStore'
 import { authService } from '@/lib/services/authService'
+import { SentryService } from '@/lib/utils/sentry'
 
 interface AuthContextType {
   user: User | null
@@ -28,13 +29,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
+      
+      // Set Sentry user context
+      if (session?.user) {
+        SentryService.setUserContext({
+          id: session.user.id,
+          email: session.user.email,
+          username: session.user.user_metadata?.username,
+          name: session.user.user_metadata?.name
+        })
+      } else {
+        SentryService.clearUserContext()
+      }
     })
 
     // Listen for auth changes
-    const { data: { subscription } } = authService.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = authService.onAuthStateChange((event, session) => {
       setSession(session as Session | null)
       setUser((session as Session | null)?.user ?? null)
       setLoading(false)
+      
+      // Track auth events with Sentry
+      if (session?.user) {
+        SentryService.setUserContext({
+          id: session.user.id,
+          email: session.user.email,
+          username: session.user.user_metadata?.username,
+          name: session.user.user_metadata?.name
+        })
+        
+        SentryService.trackAuthEvent(event === 'SIGNED_IN' ? 'login' : 'signup', {
+          provider: session.user.app_metadata?.provider,
+          userId: session.user.id
+        })
+      } else {
+        SentryService.clearUserContext()
+        if (event === 'SIGNED_OUT') {
+          SentryService.trackAuthEvent('logout')
+        }
+      }
     })
 
     return () => subscription.unsubscribe()

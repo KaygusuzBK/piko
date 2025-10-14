@@ -8,14 +8,18 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import { Film, Image as ImageIcon, FileVideo } from 'lucide-react'
+import { Film, Image as ImageIcon, FileVideo, Upload } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { UploadZone } from '@/components/upload/UploadZone'
 
 interface MediaPickerProps {
   onMediaSelect: (files: File[], type: 'image' | 'video' | 'gif') => void
   disabled?: boolean
+  showDragDrop?: boolean
+  className?: string
 }
 
-export function MediaPicker({ onMediaSelect, disabled }: MediaPickerProps) {
+export const MediaPicker = dynamic(() => Promise.resolve(function MediaPicker({ onMediaSelect, disabled, showDragDrop = false, className }: MediaPickerProps) {
   const imageInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
   const gifInputRef = useRef<HTMLInputElement>(null)
@@ -43,6 +47,31 @@ export function MediaPicker({ onMediaSelect, disabled }: MediaPickerProps) {
       onMediaSelect(files, 'gif')
       setIsOpen(false)
     }
+  }
+
+  const handleDragDropFiles = (files: File[]) => {
+    const imageFiles = files.filter(file => file.type.startsWith('image/'))
+    const videoFiles = files.filter(file => file.type.startsWith('video/'))
+    
+    if (imageFiles.length > 0) {
+      onMediaSelect(imageFiles, 'image')
+    }
+    if (videoFiles.length > 0) {
+      onMediaSelect(videoFiles, 'video')
+    }
+  }
+
+  if (showDragDrop) {
+    return (
+      <div className={className}>
+        <UploadZone
+          onFilesSelected={handleDragDropFiles}
+          maxFiles={4}
+          maxSize={10 * 1024 * 1024} // 10MB
+          disabled={disabled}
+        />
+      </div>
+    )
   }
 
   return (
@@ -118,5 +147,17 @@ export function MediaPicker({ onMediaSelect, disabled }: MediaPickerProps) {
       </DropdownMenu>
     </>
   )
-}
+}), {
+  ssr: false,
+  loading: () => (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="group h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white active:text-pink-500 dark:active:text-pink-400 disabled:opacity-50 transition-all duration-200 hover:scale-110"
+    >
+      <Film className="h-3 w-3 group-active:text-pink-500 dark:group-active:text-pink-400 transition-transform duration-200 hover:scale-125" />
+      <span className="sr-only">Medya ekle</span>
+    </Button>
+  )
+})
 

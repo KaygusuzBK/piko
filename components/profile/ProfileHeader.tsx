@@ -4,6 +4,7 @@ import { Camera, Edit2 } from 'lucide-react'
 import { User } from '@/lib/types'
 import { FollowButton } from '@/components/FollowButton'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 
 interface ProfileHeaderProps {
   user: User
@@ -44,11 +45,22 @@ export function ProfileHeader({ user, isOwner, isCompact, currentUserId, onBanne
       {/* Banner */}
       <div className="relative group">
         <div
-          className={`w-full bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg transition-all duration-300 ${
+          className={`w-full bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg transition-all duration-300 overflow-hidden relative ${
             isCompact ? 'h-20 sm:h-24' : 'h-32 sm:h-40 lg:h-48'
           }`}
-          style={user.banner_url ? { backgroundImage: `url(${user.banner_url})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
-        />
+        >
+          {user.banner_url && (
+            <Image
+              src={user.banner_url}
+              alt={`${user.name} banner`}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              priority={false}
+              quality={85}
+            />
+          )}
+        </div>
         {isOwner && (
           <label className="absolute inset-0 hidden group-hover:flex items-center justify-center rounded-lg bg-black/40 cursor-pointer">
             <input

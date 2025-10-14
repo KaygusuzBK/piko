@@ -7,6 +7,9 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Toaster } from "sonner";
 import { NotificationToasts } from "@/components/notifications/NotificationToasts";
+import { QueryProvider } from "@/components/providers/QueryProvider";
+import { OfflineIndicator } from "@/components/offline/OfflineIndicator";
+import { MobileNavigation } from "@/components/mobile/MobileNavigation";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,25 +42,29 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="tr" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <AuthProvider>
-            {children}
-          </AuthProvider>
-          <Toaster position="top-right" richColors closeButton />
-          <NotificationToasts />
-          <Analytics />
-          <SpeedInsights />
-        </ThemeProvider>
-      </body>
-    </html>
+        <html lang="tr" suppressHydrationWarning>
+          <body
+            className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+          >
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <QueryProvider>
+                <AuthProvider>
+                  <OfflineIndicator />
+                  {children}
+                  <MobileNavigation />
+                </AuthProvider>
+                <Toaster position="top-right" richColors closeButton />
+                <NotificationToasts />
+                <Analytics />
+                <SpeedInsights />
+              </QueryProvider>
+            </ThemeProvider>
+          </body>
+        </html>
   );
 }

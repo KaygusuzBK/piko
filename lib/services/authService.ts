@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase'
+import { Session } from '@supabase/supabase-js'
 
 export class AuthService {
   private supabase = createClient()
@@ -83,7 +84,7 @@ export class AuthService {
     return await this.supabase.auth.getSession()
   }
 
-  onAuthStateChange(callback: (event: string, session: unknown) => void) {
+  onAuthStateChange(callback: (event: string, session: Session | null) => void) {
     return this.supabase.auth.onAuthStateChange(callback)
   }
 }

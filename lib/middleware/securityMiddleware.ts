@@ -88,10 +88,10 @@ export async function securityMiddleware(request: NextRequest) {
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   
-  // CSP (Content Security Policy) - Supabase ve Vercel Analytics için güncellenmiş
+  // CSP (Content Security Policy) - Supabase, Vercel Analytics ve Google Fonts için güncellenmiş
   const csp = process.env.NODE_ENV === 'production' 
-    ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://yhrmzpmeetzuvsgdihnc.supabase.co https://va.vercel-scripts.com;"
-    : "default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://yhrmzpmeetzuvsgdihnc.supabase.co https://va.vercel-scripts.com;";
+    ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://yhrmzpmeetzuvsgdihnc.supabase.co https://va.vercel-scripts.com;"
+    : "default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://yhrmzpmeetzuvsgdihnc.supabase.co https://va.vercel-scripts.com;";
   
   response.headers.set('Content-Security-Policy', csp);
   

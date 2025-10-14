@@ -14,7 +14,7 @@ interface FollowSuggestionsProps {
 }
 
 export function FollowSuggestions({ currentUserId, limit = 5 }: FollowSuggestionsProps) {
-  const { suggestions, loading, refresh } = useFollowSuggestions(currentUserId, limit)
+  const { data: suggestions = [], isLoading: loading, refetch } = useFollowSuggestions(currentUserId, limit)
   const { toggleFollow } = useToggleFollow()
   const router = useRouter()
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set())

@@ -10,6 +10,7 @@ import { PostContent } from './post/PostContent'
 import { PostActions } from './post/PostActions'
 import { useNotificationStore } from '@/stores/notificationStore'
 import { useAuthStore } from '@/stores/authStore'
+import { SentryService } from '@/lib/utils/sentry'
 import Image from 'next/image'
 
 interface PostCardProps {
@@ -68,6 +69,17 @@ export function PostCard({
     try {
       await onLike?.(post.id)
       
+      // Track post interaction with Sentry
+      SentryService.trackPostInteraction(
+        prevLiked ? 'unlike' : 'like',
+        post.id,
+        {
+          authorId: post.author.id,
+          postType: post.type,
+          hasMedia: !!post.image_urls?.length
+        }
+      )
+      
         // Add notification if user liked someone else's post
         if (!prevLiked && user && user.id !== post.author.id) {
           addNotification({
@@ -80,7 +92,14 @@ export function PostCard({
             postId: post.id,
           })
         }
-    } catch {
+    } catch (error) {
+      // Track error with Sentry
+      SentryService.trackError(error as Error, {
+        action: 'like_post',
+        postId: post.id,
+        authorId: post.author.id
+      })
+      
       // Revert on error
       setIsLiked(prevLiked)
       setLikesCount(prevCount)

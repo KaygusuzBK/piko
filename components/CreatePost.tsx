@@ -6,16 +6,17 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import { useAuthStore } from '@/stores/authStore'
-import { createPost, CreatePostData } from '@/lib/posts'
+import { createPost, CreatePostData, Post } from '@/lib/posts'
 import { uploadMultiplePostImages, validateImageFile } from '@/lib/utils/imageUpload'
 import { EmojiPicker } from '@/components/EmojiPicker'
 import { AISuggestions } from '@/components/AISuggestions'
 import { MediaPicker } from '@/components/MediaPicker'
-import { Send, X } from 'lucide-react'
+import { PollCreator } from '@/components/poll/PollCreator'
+import { Send, X, BarChart3 } from 'lucide-react'
 import Image from 'next/image'
 
 interface CreatePostProps {
-  onPostCreated?: () => void
+  onPostCreated?: (newPost: Post) => void
   isCompact?: boolean
 }
 
@@ -29,6 +30,8 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
   const [selectedImages, setSelectedImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [showPollCreator, setShowPollCreator] = useState(false)
+  const [createdPostId, setCreatedPostId] = useState<string | null>(null)
 
   const handleRemoveImage = (index: number) => {
     setSelectedImages(prev => prev.filter((_, i) => i !== index))
@@ -128,7 +131,11 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
       if (newPost) {
         setContent('')
         handleRemoveAllImages()
-        onPostCreated?.()
+        // Anket oluşturma durumunu kontrol et
+        if (showPollCreator) {
+          setCreatedPostId(newPost.id)
+        }
+        onPostCreated?.(newPost)
         console.log('Post created successfully:', newPost)
       } else {
         console.error('Failed to create post - no post returned')
@@ -149,7 +156,18 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
     }
   }
 
+  const handlePollCreated = () => {
+    setShowPollCreator(false)
+    setCreatedPostId(null)
+  }
+
+  const handleCancelPoll = () => {
+    setShowPollCreator(false)
+    setCreatedPostId(null)
+  }
+
   return (
+    <>
     <Card className={`w-full border transition-all duration-300 ${
       isCompact && !isFocused ? 'bg-transparent border-transparent shadow-none h-6' : 'border-border bg-card dark:bg-transparent card-dark-gradient'
     }`}>
@@ -202,6 +220,23 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
                         disabled={selectedImages.length >= MAX_IMAGES}
                       />
                       <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          if (content.trim() || selectedImages.length > 0) {
+                            // Önce post oluştur, sonra anket ekle
+                            handlePost()
+                            setShowPollCreator(true)
+                          }
+                        }}
+                        className="group h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white disabled:opacity-50 transition-all duration-200 hover:scale-110"
+                        disabled={!content.trim() && selectedImages.length === 0}
+                        title="Anket oluştur"
+                      >
+                        <BarChart3 className="h-3 w-3 group-active:text-blue-500 dark:group-active:text-blue-400 transition-transform duration-200 hover:scale-125" />
+                        <span className="sr-only">Anket oluştur</span>
+                      </Button>
                       <AISuggestions 
                         onSuggestionSelect={handleAISuggestion}
                         currentContent={content}
@@ -316,6 +351,23 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
                       disabled={selectedImages.length >= MAX_IMAGES}
                     />
                     <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        if (content.trim() || selectedImages.length > 0) {
+                          // Önce post oluştur, sonra anket ekle
+                          handlePost()
+                          setShowPollCreator(true)
+                        }
+                      }}
+                      className="group h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white disabled:opacity-50 transition-all duration-200 hover:scale-110"
+                      disabled={!content.trim() && selectedImages.length === 0}
+                      title="Anket oluştur"
+                    >
+                      <BarChart3 className="h-3 w-3 group-active:text-blue-500 dark:group-active:text-blue-400 transition-transform duration-200 hover:scale-125" />
+                      <span className="sr-only">Anket oluştur</span>
+                    </Button>
                     <AISuggestions 
                       onSuggestionSelect={handleAISuggestion}
                       currentContent={content}
@@ -353,5 +405,31 @@ export function CreatePost({ onPostCreated, isCompact = false }: CreatePostProps
         </div>
       </CardContent>
     </Card>
+
+    {/* Poll Creator Modal */}
+    {showPollCreator && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-background rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          {createdPostId ? (
+            <PollCreator
+              postId={createdPostId}
+              onPollCreated={handlePollCreated}
+              onCancel={handleCancelPoll}
+            />
+          ) : (
+            <div className="p-6 text-center">
+              <h3 className="text-lg font-semibold mb-2">Anket Oluşturuluyor</h3>
+              <p className="text-muted-foreground mb-4">
+                Önce gönderiniz oluşturuluyor, ardından anket ekleyebilirsiniz.
+              </p>
+              <Button variant="outline" onClick={handleCancelPoll}>
+                İptal
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
+  </>
   )
 }

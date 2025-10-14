@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { Smile } from 'lucide-react'
+import dynamic from 'next/dynamic'
 
 interface EmojiPickerProps {
   onEmojiSelect: (emoji: string) => void
@@ -22,60 +23,62 @@ const EMOJI_CATEGORIES = {
   'Doğa': ['🌸', '🌺', '🌻', '🌷', '🌹', '🥀', '🌼', '🌿', '☘️', '🍀', '🍁', '🍂', '🍃', '🌾', '🌱', '🌲', '🌳', '🌴', '🌵', '🌊', '🌈', '⚡', '☀️', '🌤️', '⛅', '🌥️', '☁️', '🌦️', '🌧️', '⛈️']
 }
 
-export function EmojiPicker({ onEmojiSelect }: EmojiPickerProps) {
+function EmojiPickerContent({ onEmojiSelect }: EmojiPickerProps) {
   const [activeCategory, setActiveCategory] = useState<string>('Yüz İfadeleri')
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={(e) => e.stopPropagation()}
-          className="h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-foreground dark:text-white/70 dark:hover:text-white transition-all duration-200 hover:scale-110"
-        >
-          <Smile className="h-3 w-3 transition-transform duration-200 hover:scale-125" />
-          <span className="sr-only">Emoji ekle</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-80 p-2">
-        {/* Category Tabs */}
-        <div className="flex gap-1 mb-2 overflow-x-auto scrollbar-hide">
+    <DropdownMenuContent className="w-80 p-4" align="start">
+      <div className="space-y-4">
+        {/* Category tabs */}
+        <div className="flex flex-wrap gap-1">
           {Object.keys(EMOJI_CATEGORIES).map((category) => (
-            <button
+            <Button
               key={category}
-              onClick={(e) => {
-                e.stopPropagation()
-                setActiveCategory(category)
-              }}
-              className={`px-2 py-1 text-xs rounded-md whitespace-nowrap transition-colors ${
-                activeCategory === category
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted hover:bg-muted/80'
-              }`}
+              variant={activeCategory === category ? 'default' : 'ghost'}
+              size="sm"
+              className="text-xs"
+              onClick={() => setActiveCategory(category)}
             >
               {category}
-            </button>
+            </Button>
           ))}
         </div>
 
-        {/* Emoji Grid */}
-        <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto">
-          {EMOJI_CATEGORIES[activeCategory as keyof typeof EMOJI_CATEGORIES].map((emoji, index) => (
-            <button
-              key={index}
-              onClick={(e) => {
-                e.stopPropagation()
-                onEmojiSelect(emoji)
-              }}
-              className="text-2xl hover:bg-muted rounded p-1 transition-all duration-200 hover:scale-125"
+        {/* Emoji grid */}
+        <div className="grid grid-cols-8 gap-2 max-h-48 overflow-y-auto">
+          {EMOJI_CATEGORIES[activeCategory as keyof typeof EMOJI_CATEGORIES].map((emoji) => (
+            <Button
+              key={emoji}
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 text-lg hover:bg-muted"
+              onClick={() => onEmojiSelect(emoji)}
             >
               {emoji}
-            </button>
+            </Button>
           ))}
         </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </div>
+    </DropdownMenuContent>
   )
 }
 
+export const EmojiPicker = dynamic(() => Promise.resolve(function EmojiPicker({ onEmojiSelect }: EmojiPickerProps) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+          <Smile className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <EmojiPickerContent onEmojiSelect={onEmojiSelect} />
+    </DropdownMenu>
+  )
+}), {
+  ssr: false,
+  loading: () => (
+    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+      <Smile className="h-4 w-4" />
+    </Button>
+  )
+})

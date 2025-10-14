@@ -84,7 +84,7 @@ export class PostRepository {
     }
   }
 
-  async fetchPosts(filters: PostQueryFilters) {
+  async fetchPosts(filters: PostQueryFilters): Promise<any[]> {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let query: any = this.supabase

@@ -26,6 +26,11 @@ export class PostQueryService {
     try {
       const rawPosts = await postRepository.fetchPosts(filters)
 
+      if (!Array.isArray(rawPosts)) {
+        console.warn('fetchPosts returned non-array:', rawPosts)
+        return []
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return rawPosts.map((post: Record<string, any>) => {
         const interactionStatus = this.processInteractionStatus(

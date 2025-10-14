@@ -10,16 +10,36 @@ import { RightSidebar } from '@/components/RightSidebar'
 import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog'
 import { useFeedPosts } from '@/hooks/usePosts'
 import { usePostInteractions } from '@/hooks/usePostInteractions'
-import { deletePost } from '@/lib/posts'
+import { deletePost, Post, PostWithAuthor } from '@/lib/posts'
 
 export default function Home() {
   const { user, loading } = useAuthStore()
   const router = useRouter()
-  const { posts, setPosts, refresh } = useFeedPosts(user?.id)
+  const { posts, setPosts, refresh, addNewPost } = useFeedPosts(user?.id)
   const { toggleLike, toggleRetweet, toggleBookmark } = usePostInteractions()
+  
+  const handleNewPost = useCallback((newPost: Post) => {
+    // Post'u PostWithAuthor'a dönüştür ve güncel tarih ekle
+    const postWithAuthor: PostWithAuthor = {
+      ...newPost,
+      created_at: new Date().toISOString(), // Güncel tarih
+      author: {
+        id: user?.id || '',
+        username: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Kullanıcı',
+        avatar_url: user?.user_metadata?.avatar_url || undefined
+      },
+      user_interaction_status: {
+        isLiked: false,
+        isRetweeted: false,
+        isBookmarked: false
+      }
+    }
+    addNewPost(postWithAuthor)
+  }, [user, addNewPost])
   const [isCreatePostCompact, setIsCreatePostCompact] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [postToDelete, setPostToDelete] = useState<string | null>(null)
+      const [useInfiniteScroll, setUseInfiniteScroll] = useState(false) // Disable infinite scroll temporarily
 
   useEffect(() => {
     if (!loading && !user) {
@@ -215,7 +235,7 @@ export default function Home() {
 
             <MainFeed
               posts={posts}
-              onPostCreated={refresh}
+              onPostCreated={handleNewPost}
               isCreatePostCompact={isCreatePostCompact}
               setIsCreatePostCompact={setIsCreatePostCompact}
               onLike={handleLike}
@@ -224,6 +244,8 @@ export default function Home() {
               onComment={handleComment}
               currentUserId={user.id}
               onDelete={handleDelete}
+              useInfiniteScroll={useInfiniteScroll}
+              onRefresh={refresh}
             />
 
             <RightSidebar />
